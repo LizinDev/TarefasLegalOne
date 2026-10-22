@@ -1,0 +1,4 @@
+interface:
+  display_name: "Contrato da CLI"
+  short_description: "Mantém flags, códigos de saída e MANUAL.md em sincronia"
+  default_prompt: "Use $contrato-cli para desenhar ou revisar uma mudança de flag, código de saída ou mensagem de erro do FaturamentoLegalOne e levar MANUAL.md, README, o ps1 e a CI junto."

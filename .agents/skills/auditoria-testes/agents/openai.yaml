@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auditoria de testes e CI"
+  short_description: "Audita pytest, ruff e workflows com prova por perturbação"
+  default_prompt: "Use $auditoria-testes para auditar a suíte e a CI do FaturamentoLegalOne — o que executa, o que protege e o que os falsos não cobrem — antes de propor mudanças."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Investigação do Legal One"
+  short_description: "Levanta seletores, campos e requisições por observação passiva"
+  default_prompt: "Use $investigacao-legal-one para responder, com evidência passiva do DevTools e sem gravar nada, como o Legal One se comporta hoje antes de mudar src/legalone.py."

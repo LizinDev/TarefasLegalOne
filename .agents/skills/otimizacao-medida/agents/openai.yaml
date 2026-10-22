@@ -1,0 +1,4 @@
+interface:
+  display_name: "Otimização medida"
+  short_description: "Reduz o tempo por processo com medição e o ledger como oráculo"
+  default_prompt: "Use $otimizacao-medida para achar e provar, com rodadas simuladas equivalentes e um orçamento de acessos ao Legal One, onde a rodada perde tempo por processo."
