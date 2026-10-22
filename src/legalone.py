@@ -22,6 +22,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import catalogo
 import config
+import seletores
 
 logger = logging.getLogger(__name__)
 
@@ -276,26 +277,7 @@ class AutomadorLegalOne:
         # resultado" para um processo que existe. Linha sem link de processo e
         # descartada, entao varrer a mais nao inventa candidato.
         # O Set evita contar duas vezes a mesma linha quando ha tabela aninhada.
-        resultado = self.driver.execute_script("""
-        const sentinela = !!document.querySelector('#Search');
-        const vistas = new Set();
-        const linhas = [];
-        for (const tabela of document.querySelectorAll('table')) {
-          for (const tr of tabela.querySelectorAll('tbody tr')) {
-            if (vistas.has(tr)) continue;
-            vistas.add(tr);
-            const link = [...tr.querySelectorAll('a')]
-              .map(a => a.getAttribute('href') || '')
-              .find(h => h.includes('/processos/processos/details/'));
-            if (!link) continue;
-            linhas.push({
-              cels: [...tr.querySelectorAll('td')].map(td => td.innerText.trim()),
-              href: link,
-            });
-          }
-        }
-        return {sentinela: sentinela, linhas: linhas};
-        """)
+        resultado = self.driver.execute_script(seletores.JS_BUSCAR_PROCESSO)
 
         if not resultado["sentinela"]:
             raise RuntimeError(
@@ -337,21 +319,7 @@ class AutomadorLegalOne:
         # isso a ausencia da grade so e aceita como "nao tem a tarefa" se a
         # pagina de compromissos/tarefas de fato carregou — o campo de busca da
         # aba serve de sentinela.
-        resultado = self.driver.execute_script("""
-        const sentinela = !!document.querySelector('#Search');
-        for (const t of document.querySelectorAll('table')) {
-          const cab = [...t.querySelectorAll('thead th, thead td')]
-            .map(e => e.innerText.trim());
-          const i = cab.findIndex(c => /Descri/i.test(c));
-          if (i < 0) continue;
-          return {sentinela: sentinela, descricoes: [...t.querySelectorAll('tbody tr')]
-            .map(tr => {
-              const c = tr.querySelectorAll('td');
-              return i < c.length ? c[i].innerText.replace(/\\s+/g, ' ').trim() : '';
-            })};
-        }
-        return {sentinela: sentinela, descricoes: null};
-        """)
+        resultado = self.driver.execute_script(seletores.JS_CONTAR_TAREFAS)
 
         descricoes = resultado["descricoes"]
         if descricoes is None:
@@ -393,7 +361,7 @@ class AutomadorLegalOne:
         """
         botao = self.wait.until(EC.element_to_be_clickable((
             By.CSS_SELECTOR,
-            "#LookupStatusCompromissoTarefa .lookup-button.lookup-show",
+            seletores.ABRIR_STATUS,
         )))
         self.driver.execute_script(
             "arguments[0].scrollIntoView({block: 'center'});", botao
@@ -402,15 +370,15 @@ class AutomadorLegalOne:
 
         linha = self.wait.until(EC.element_to_be_clickable((
             By.XPATH,
-            "//div[contains(@class,'lookup-dropdown')]"
-            f"//td[@data-val-field='Value' and normalize-space()='{status}']",
+            seletores.LINHA_STATUS.format(status=status),
         )))
         linha.click()
 
         esperado = config.STATUS_VALIDOS.get(status)
         self.wait.until(lambda d: (
-            d.find_element(By.ID, "StatusText").get_attribute("value") == status
-            and d.find_element(By.ID, "StatusId").get_attribute("value") == esperado
+            d.find_element(By.ID, seletores.STATUS_TEXTO).get_attribute("value") == status
+            and d.find_element(By.ID, seletores.STATUS_ID)
+            .get_attribute("value") == esperado
         ))
 
     def _preencher_responsavel(self, nome: str) -> None:
@@ -421,7 +389,7 @@ class AutomadorLegalOne:
         lista, que mostra no maximo 10.
         """
         campo = self.wait.until(EC.visibility_of_element_located((
-            By.CSS_SELECTOR, "input[id*='__EnvolvidoText']"
+            By.CSS_SELECTOR, seletores.RESPONSAVEL
         )))
         self.driver.execute_script(
             "arguments[0].scrollIntoView({block: 'center'});", campo
@@ -438,7 +406,7 @@ class AutomadorLegalOne:
         # XPath com o nome: um apostrofo no nome quebraria a expressao.
         def linha_do_nome(d):
             for td in d.find_elements(
-                By.CSS_SELECTOR, "td[data-val-field='ContatoNome']"
+                By.CSS_SELECTOR, seletores.LINHA_RESPONSAVEL
             ):
                 if td.is_displayed() and " ".join(td.text.split()) == nome:
                     return td
@@ -447,7 +415,7 @@ class AutomadorLegalOne:
         self.wait.until(linha_do_nome).click()
 
         self.wait.until(lambda d: d.find_element(
-            By.CSS_SELECTOR, "input[id*='__EnvolvidoText']"
+            By.CSS_SELECTOR, seletores.RESPONSAVEL
         ).get_attribute("value") == nome)
 
     def _esperar_ajax(self) -> None:
@@ -472,25 +440,27 @@ class AutomadorLegalOne:
         if not tarefa.tipo_id:
             # Tarefa que nao passou pela checagem: so confere o que ja vem, como
             # ate a 1.8 — nunca escolhe um tipo que ninguem conferiu.
-            texto = self.driver.find_element(By.ID, "TipoText").get_attribute("value")
+            texto = self.driver.find_element(
+                By.ID, seletores.TIPO_TEXTO
+            ).get_attribute("value")
             if texto != tarefa.tipo:
                 raise RuntimeError(
                     f"Tipo padrao mudou: esperava {tarefa.tipo!r}, veio {texto!r}"
                 )
             return
-        atual = self.driver.find_element(By.ID, "TipoId").get_attribute("value")
+        atual = self.driver.find_element(By.ID, seletores.TIPO_ID).get_attribute("value")
         if atual == tarefa.tipo_id:
             return
 
         botao = self.wait.until(EC.element_to_be_clickable((
-            By.CSS_SELECTOR, "#lookup_tipo .lookup-button.lookup-show"
+            By.CSS_SELECTOR, seletores.ABRIR_TIPO
         )))
         self.driver.execute_script(
             "arguments[0].scrollIntoView({block: 'center'});", botao
         )
         botao.click()
         linha = self.wait.until(EC.presence_of_element_located((
-            By.CSS_SELECTOR, f"tr[id='{tarefa.tipo_id}']"
+            By.CSS_SELECTOR, seletores.LINHA_TIPO.format(tipo_id=tarefa.tipo_id)
         )))
         if not linha.is_displayed():
             # Subtipo: o pai vem recolhido. A classe child-of-<pai> diz qual e.
@@ -502,12 +472,12 @@ class AutomadorLegalOne:
                     f"tipo {tarefa.tipo_id} escondido e sem pai na arvore"
                 )
             self.driver.find_element(
-                By.CSS_SELECTOR, f"tr[id='{pai}'] .expander"
+                By.CSS_SELECTOR, seletores.EXPANDIR_TIPO.format(pai=pai)
             ).click()
             self.wait.until(lambda d: linha.is_displayed())
-        linha.find_element(By.TAG_NAME, "td").click()
+        linha.find_element(By.TAG_NAME, seletores.CELULA).click()
 
-        self.wait.until(lambda d: d.find_element(By.ID, "TipoId")
+        self.wait.until(lambda d: d.find_element(By.ID, seletores.TIPO_ID)
                         .get_attribute("value") == tarefa.tipo_id)
         self._esperar_ajax()
 
@@ -518,10 +488,12 @@ class AutomadorLegalOne:
         Uma tarefa gravada com data diferente da pedida e pior do que um erro,
         porque passa por cadastro certo.
         """
-        pedidas = {"DtInicial": tarefa.data_inicio, "DtFinal": tarefa.data_fim,
-                   "HrInicio": tarefa.hora_inicio, "HrFinal": tarefa.hora_fim,
-                   "DtPublicacao": tarefa.data_publicacao,
-                   "AvailableDate": tarefa.data_disponibilizacao}
+        pedidas = {seletores.DATA_INICIAL: tarefa.data_inicio,
+                   seletores.DATA_FINAL: tarefa.data_fim,
+                   seletores.HORA_INICIAL: tarefa.hora_inicio,
+                   seletores.HORA_FINAL: tarefa.hora_fim,
+                   seletores.DATA_PUBLICACAO: tarefa.data_publicacao,
+                   seletores.DATA_DISPONIBILIZACAO: tarefa.data_disponibilizacao}
         for campo, valor in pedidas.items():
             if valor is None:
                 continue
@@ -601,14 +573,16 @@ class AutomadorLegalOne:
         escrito = ""
         for _ in range(config.TENTATIVAS_DESCRICAO):
             campo = self.wait.until(
-                EC.visibility_of_element_located((By.ID, "Descricao"))
+                EC.visibility_of_element_located((By.ID, seletores.DESCRICAO))
             )
             campo.clear()
             campo.send_keys(descricao)
             # O apagao vem do script da pagina terminando de montar o
             # formulario, um instante depois; conferir na hora nao pega.
             time.sleep(config.DEBOUNCE_DELAY)
-            escrito = self.driver.find_element(By.ID, "Descricao").get_attribute("value")
+            escrito = self.driver.find_element(
+                By.ID, seletores.DESCRICAO
+            ).get_attribute("value")
             if escrito == descricao:
                 return
         raise RuntimeError(f"campo Descricao ficou {escrito!r}, esperava {descricao!r}")
@@ -622,34 +596,18 @@ class AutomadorLegalOne:
         clica em botao de dispensa ("Ok, entendi" ou o X): o aviso tambem traz
         botoes que abrem outras paginas.
         """
-        return bool(self.driver.execute_script("""
-        // offsetParent nao serve: e null em elemento position:fixed, que e
-        // justamente como o aviso fica ancorado no canto da tela.
-        const visivel = e => e && e.getClientRects().length > 0
-          && getComputedStyle(e).visibility !== 'hidden';
-        for (const guia of document.querySelectorAll(
-            '#pendo-guide-container, ._pendo-step-container-styles')) {
-          if (!visivel(guia)) continue;
-          const botao = [...guia.querySelectorAll('button, ._pendo-close-guide')]
-            .find(b => visivel(b) && (b.classList.contains('_pendo-close-guide')
-                   || /^\\s*ok,?\\s*entendi\\s*$/i.test(b.innerText || '')));
-          if (botao) { botao.click(); return true; }
-        }
-        return false;
-        """))
+        return bool(self.driver.execute_script(seletores.JS_FECHAR_AVISO_PENDO))
 
     def _esperar_mascara_sumir(self) -> None:
         """Espera a mascara de carregamento dos lookups sair da frente do Salvar."""
         with contextlib.suppress(TimeoutException):
-            self.wait.until(lambda d: not d.execute_script("""
-            return [...document.querySelectorAll('.modal-mask')]
-              .some(m => m.getClientRects().length > 0
-                         && getComputedStyle(m).visibility !== 'hidden');
-            """))
+            self.wait.until(lambda d: not d.execute_script(
+                seletores.JS_ESPERAR_MASCARA_SUMIR
+            ))
 
     def _clicar_salvar(self) -> None:
         botao = self.wait.until(EC.element_to_be_clickable((
-            By.XPATH, "//button[@name='ButtonSave' and @value='0']"
+            By.XPATH, seletores.SALVAR
         )))
         self.driver.execute_script(
             "arguments[0].scrollIntoView({block: 'center'});", botao
@@ -672,17 +630,14 @@ class AutomadorLegalOne:
     # Onde o Legal One poe as mensagens de recusa. O span-error-validation-message
     # e o do erro de data/status ("O status selecionado nao pode ser
     # 'Pendente'..."), e ficou de fora ate a 1.8 — a recusa passava por sucesso.
-    SELETOR_ERROS = (".field-validation-error, .validation-summary-errors, "
-                     ".alert-danger, .span-error-validation-message")
+    SELETOR_ERROS = seletores.ERROS_VALIDACAO
 
     def _erros_de_validacao(self) -> str:
         # So conta mensagem visivel: o formulario pode trazer o span de erro
         # montado e escondido, e ler texto escondido recusaria um cadastro bom.
-        return self.driver.execute_script("""
-        return [...document.querySelectorAll(arguments[0])]
-          .filter(e => e.getClientRects().length > 0)
-          .map(e => e.innerText.trim()).filter(t => t).join(' | ');
-        """, self.SELETOR_ERROS) or ""
+        return self.driver.execute_script(
+            seletores.JS_ERROS_DE_VALIDACAO, self.SELETOR_ERROS
+        ) or ""
 
     def _aviso_na_tela(self) -> str:
         """Texto do aviso modal do Legal One (Sim/Nao), ou "" se nao houver.
@@ -690,17 +645,10 @@ class AutomadorLegalOne:
         E um popup do proprio site, e nao um alert do navegador: o Selenium nao
         o enxerga como alerta, e so a leitura do DOM o encontra.
         """
-        return self.driver.execute_script("""
-        const ok = document.getElementById('popup_ok');
-        if (!ok || ok.getClientRects().length === 0) return '';
-        const caixa = document.getElementById('popup_message')
-          || document.getElementById('popup_container') || ok.parentElement;
-        const texto = (caixa.innerText || '').replace(/\\s+/g, ' ').trim();
-        return texto || '(aviso sem texto)';
-        """) or ""
+        return self.driver.execute_script(seletores.JS_AVISO_NA_TELA) or ""
 
     def _responder_aviso(self, sim: bool) -> None:
-        botao = "popup_ok" if sim else "popup_cancel"
+        botao = seletores.CONFIRMAR_AVISO if sim else seletores.RECUSAR_AVISO
         self.driver.execute_script(
             "document.getElementById(arguments[0]).click();", botao
         )
@@ -756,20 +704,22 @@ class AutomadorLegalOne:
         # Publicacao e disponibilizacao tambem: o subtipo as preenche com hoje,
         # e a publicacao, com prazo, pode recalcular inicio e fim de novo.
         if tarefa.data_publicacao:
-            self._preencher_data("DtPublicacao", tarefa.data_publicacao)
+            self._preencher_data(seletores.DATA_PUBLICACAO, tarefa.data_publicacao)
         if tarefa.data_disponibilizacao:
-            self._preencher_data("AvailableDate", tarefa.data_disponibilizacao)
+            self._preencher_data(
+                seletores.DATA_DISPONIBILIZACAO, tarefa.data_disponibilizacao
+            )
         if tarefa.data_publicacao or tarefa.data_disponibilizacao:
             self._esperar_ajax()
 
-        self._preencher_data("DtInicial", tarefa.data_inicio)
-        self._preencher_data("DtFinal", tarefa.data_fim)
+        self._preencher_data(seletores.DATA_INICIAL, tarefa.data_inicio)
+        self._preencher_data(seletores.DATA_FINAL, tarefa.data_fim)
         # Sem hora pedida, fica a que o formulario sugere — o comportamento de
         # sempre. Hora so e escrita quando a tarefa traz uma.
         if tarefa.hora_inicio:
-            self._preencher_data("HrInicio", tarefa.hora_inicio)
+            self._preencher_data(seletores.HORA_INICIAL, tarefa.hora_inicio)
         if tarefa.hora_fim:
-            self._preencher_data("HrFinal", tarefa.hora_fim)
+            self._preencher_data(seletores.HORA_FINAL, tarefa.hora_fim)
         self._selecionar_status(tarefa.status)
         self._preencher_responsavel(tarefa.responsavel)
         self._conferir_datas(tarefa)
