@@ -30,3 +30,7 @@ logs/
 # Editores
 .idea/
 .vscode/
+
+# Capturas de investigacao podem conter dados de cliente e credenciais
+*.har
+*.mitm
