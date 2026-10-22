@@ -338,10 +338,12 @@ Qualquer um desses arquivos pode ser refeito depois com `--relatorio`
 O formato aceito está no [manual](MANUAL.md#a-planilha-de-entrada). Três
 decisões por trás dele:
 
-A coluna da cobrança aceita **três nomes**, `TIPO DE COBRANÇA`, `TAREFA` e
-`TAREFA PARA LANÇAR` (`COLUNAS_TIPO_COBRANCA`, em `config.py`). Não é
-conveniência: as planilhas chegam de origens diferentes — a de 2022 batizou a
-coluna de `TAREFA`, a de 2026 de `TAREFA PARA LANÇAR`. Com um
+A coluna da cobrança aceita **quatro nomes**, `TIPO DE COBRANÇA`, `TAREFA`,
+`TAREFA PARA LANÇAR` e `TAREFA LEGAL ONE` (`COLUNAS_TIPO_COBRANCA`, em
+`config.py`), e a do número aceita `PROCESSO` e `Nº DO PROCESSO (padrão CNJ)`
+(`COLUNAS_PROCESSO`). Não é conveniência: as planilhas chegam de origens
+diferentes — a de 2022 batizou a coluna de `TAREFA`, a de 2026 de
+`TAREFA PARA LANÇAR`, a de honorários de `TAREFA LEGAL ONE`. Com um
 nome só, aquela aba seria lida como se a coluna estivesse vazia — no modo auto
 todas as linhas seriam puladas em silêncio, e nos perfis fixos a trava de nome
 de arquivo deixaria passar a tarefa errada para as 1.108 linhas de defesa que o

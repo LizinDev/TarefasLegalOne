@@ -151,7 +151,7 @@ def ler(
             for n_linha, linha in enumerate(ws.iter_rows(values_only=True), 1):
                 if n_linha == 1:
                     indices = _indices_cabecalho(linha)
-                    if config.COLUNA_PROCESSO not in indices:
+                    if not any(c in indices for c in config.COLUNAS_PROCESSO):
                         logger.warning(
                             "Aba %r sem coluna %r — ignorada",
                             nome, config.COLUNA_PROCESSO,
@@ -166,7 +166,7 @@ def ler(
                             break
                     continue
 
-                bruto = _celula(linha, indices, config.COLUNA_PROCESSO)
+                bruto = _celula(linha, indices, *config.COLUNAS_PROCESSO)
                 if not bruto:
                     continue
 

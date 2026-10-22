@@ -331,13 +331,24 @@ STATUS_RECUSADOS_NO_PASSADO = {"Pendente"}
 
 # --- Planilha ----------------------------------------------------------------
 
-COLUNA_PROCESSO = "PROCESSO"
+# A planilha "Tarefas LegalOne.xlsx" (honorarios de setembro/2026) batizou a
+# coluna do numero de "Nº DO PROCESSO (padrão CNJ)". Sem o segundo nome a aba e
+# ignorada inteira, por falta de coluna PROCESSO.
+COLUNAS_PROCESSO = ("PROCESSO", "Nº DO PROCESSO (PADRÃO CNJ)")
+# Nome canonico, para as mensagens de log.
+COLUNA_PROCESSO = COLUNAS_PROCESSO[0]
 # A coluna que diz a cobranca de cada linha nao tem nome unico nas planilhas que
-# chegam: as antigas trazem "TIPO DE COBRANÇA", a de 2022 traz "TAREFA" e a de
-# 2026 traz "TAREFA PARA LANÇAR". Sao nomes do mesmo campo, entao vale a
-# primeira que a aba tiver — sem isso a aba inteira e lida como se a coluna
-# estivesse vazia, e no modo auto todas as linhas sao puladas em silencio.
-COLUNAS_TIPO_COBRANCA = ("TIPO DE COBRANÇA", "TAREFA", "TAREFA PARA LANÇAR")
+# chegam: as antigas trazem "TIPO DE COBRANÇA", a de 2022 traz "TAREFA", a de
+# 2026 traz "TAREFA PARA LANÇAR" e a de honorarios traz "TAREFA LEGAL ONE". Sao
+# nomes do mesmo campo, entao vale a primeira que a aba tiver — sem isso a aba
+# inteira e lida como se a coluna estivesse vazia, e no modo auto todas as linhas
+# sao puladas em silencio.
+#
+# A de honorarios tem tambem "TIPO DE COBRANÇA (INICIAL, FINAL ETC)", com
+# CONTESTAÇÃO, ÊXITO, Acordo: nao e tarefa, e de proposito fica fora da lista.
+# Reconhecida, ela ganharia de "TAREFA LEGAL ONE" e o modo auto pularia tudo.
+COLUNAS_TIPO_COBRANCA = ("TIPO DE COBRANÇA", "TAREFA", "TAREFA PARA LANÇAR",
+                         "TAREFA LEGAL ONE")
 # Nome canonico, para as mensagens de log e a ajuda da CLI.
 COLUNA_TIPO_COBRANCA = COLUNAS_TIPO_COBRANCA[0]
 COLUNA_STATUS_LEGALONE = "STATUS LEGAL ONE"

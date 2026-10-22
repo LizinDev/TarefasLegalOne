@@ -277,6 +277,26 @@ def test_coluna_tarefa_para_lancar_vale_como_tipo_de_cobranca(tmp_path):
     ]
 
 
+def test_cabecalho_da_planilha_de_honorarios(tmp_path):
+    # "Tarefas LegalOne.xlsx": o numero vem em "Nº DO PROCESSO (padrão CNJ)" e a
+    # tarefa em "TAREFA LEGAL ONE". A coluna "TIPO DE COBRANÇA (INICIAL, FINAL
+    # ETC)" traz CONTESTAÇÃO/ÊXITO e nao pode ser lida como a da tarefa.
+    arq = _planilha(tmp_path, {"Honorários COMPLETO": [
+        ("MÊS DE FATURAMENTO (REFERÊNCIA)", "PASTA ESPAIDER OU ID ELAW",
+         "Nº DO PROCESSO (padrão CNJ)", "NOME DO AUTOR",
+         "TIPO DE COBRANÇA (INICIAL, FINAL ETC)", "TAREFA LEGAL ONE"),
+        ("SETEMBRO", 105205, CNJ_A, "Fulana", "CONTESTAÇÃO", "DEFESA FATURADA"),
+        ("SETEMBRO", 64593, CNJ_B, "Fulano", "ENCERRAMENTO S/ ÊXITO",
+         "FATURAMENTO FINAL"),
+    ]})
+
+    processos = planilha.ler(arq, tarefa_da_linha=config.tarefa_do_tipo)
+
+    assert [(p.cnj, p.tarefa) for p in processos] == [
+        (CNJ_A, "DEFESA FATURADA"), (CNJ_B, "FATURAMENTO FINAL"),
+    ]
+
+
 def test_tipo_de_cobranca_ganha_de_tarefa_quando_as_duas_existem(tmp_path):
     # Nome canonico primeiro: a coluna velha manda onde ela estiver preenchida.
     arq = _planilha(tmp_path, {"2026": [

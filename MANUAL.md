@@ -590,23 +590,30 @@ para `data/backups/` com a data e o motivo no nome
 
 ## A planilha de entrada
 
-Qualquer aba que tenha uma coluna `PROCESSO` no **cabeçalho da primeira linha**.
+Qualquer aba que tenha uma coluna `PROCESSO` (ou `Nº DO PROCESSO (padrão CNJ)`) no
+**cabeçalho da primeira linha**.
 Aba sem essa coluna é ignorada com um aviso, e não derruba a leitura.
 
 | Coluna | Obrigatória | Uso |
 | --- | --- | --- |
-| `PROCESSO` | sim | O número CNJ a buscar |
-| `TIPO DE COBRANÇA`, `TAREFA` **ou** `TAREFA PARA LANÇAR` | não | Filtro `--tipo-contem`, coluna dos relatórios e, com `--tarefa auto`, a tarefa daquela linha |
+| `PROCESSO` **ou** `Nº DO PROCESSO (padrão CNJ)` | sim | O número CNJ a buscar |
+| `TIPO DE COBRANÇA`, `TAREFA`, `TAREFA PARA LANÇAR` **ou** `TAREFA LEGAL ONE` | não | Filtro `--tipo-contem`, coluna dos relatórios e, com `--tarefa auto`, a tarefa daquela linha |
 | `STATUS LEGAL ONE` | não | Filtro `--status-planilha` e coluna dos relatórios |
 | `DESCRIÇÃO DA TAREFA`, `TIPO DA TAREFA`, `STATUS DA TAREFA`, `RESPONSÁVEL DA TAREFA` | só com `--tarefa planilha` (a descrição é obrigatória nesse modo) | A tarefa de cada linha. Fora desse modo são ignoradas |
 | `INÍCIO DA TAREFA`, `CONCLUSÃO DA TAREFA`, `PUBLICAÇÃO DA TAREFA`, `DISPONIBILIZAÇÃO DA TAREFA` | não | As datas de cada linha no modo planilha, por cima de `--data` e das outras flags de data |
 
-**A coluna da cobrança tem três nomes aceitos.** As planilhas antigas trazem
+**A coluna da cobrança tem quatro nomes aceitos.** As planilhas antigas trazem
 `TIPO DE COBRANÇA`; a de 2022 e a de 2025 trazem `TAREFA`; a de 2026 traz
-`TAREFA PARA LANÇAR`. São tratadas como o mesmo campo, e
+`TAREFA PARA LANÇAR`; a de honorários (`Tarefas LegalOne.xlsx`) traz
+`TAREFA LEGAL ONE`. São tratadas como o mesmo campo, e
 vale a primeira que tiver valor na linha — `TIPO DE COBRANÇA` primeiro. Se a
-sua planilha usar um terceiro nome, acrescente-o a `COLUNAS_TIPO_COBRANCA`, em
-`src/config.py`.
+sua planilha usar outro nome, acrescente-o a `COLUNAS_TIPO_COBRANCA`, em
+`src/config.py`; para o número, a `COLUNAS_PROCESSO`.
+
+A planilha de honorários tem também a coluna `TIPO DE COBRANÇA (INICIAL, FINAL
+ETC)`, com `CONTESTAÇÃO`, `ENCERRAMENTO S/ ÊXITO` etc. Ela **não** é reconhecida,
+de propósito: se fosse, ganharia de `TAREFA LEGAL ONE` e o modo auto pularia
+todas as linhas.
 
 Isso importa mais do que parece: sem o nome reconhecido, a coluna passa a valer
 como vazia e **`--tarefa auto` pula a aba inteira em silêncio**. Pior, se o nome
