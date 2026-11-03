@@ -1,8 +1,9 @@
 name: CodeQL
 
-# ATENCAO — em repositorio privado o code scanning exige GitHub Advanced
-# Security. Se este repo for privado e a organizacao nao tiver GHAS, este
-# workflow vai falhar no passo de upload: e so apagar o arquivo.
+# Em repositorio privado o code scanning exige GitHub Advanced Security, que
+# esta conta nao tem: desde que o repo virou privado (23/10/2026) a analise
+# falhava toda segunda. O job agora so roda com o repo publico, e volta sozinho
+# se ele for publicado de novo.
 #
 # Por isso ele nao roda em push nem em pull request: uma falha semanal por
 # licenca e um aviso, uma falha em todo push e um estorvo. Com GHAS ligado,
@@ -19,6 +20,7 @@ permissions:
 jobs:
   analise:
     name: analise estatica (python)
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     permissions:
       security-events: write   # necessario para publicar os alertas
