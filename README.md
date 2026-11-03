@@ -368,6 +368,7 @@ src/
 ├── datas.py      # datas e horas da tarefa e o que o Legal One recusa
 ├── planilha.py   # leitura do .xlsx -> lista de processos únicos
 ├── legalone.py   # Selenium: busca o processo e cadastra a tarefa
+├── seletores.py  # seletores e blocos JS do Legal One, num lugar só
 ├── ledger.py     # checkpoint em SQLite + exportação dos CSVs
 └── relatorio.py  # planilha Excel do dia (a que vai para o supervisor)
 
@@ -388,6 +389,9 @@ Planilhas/        # as planilhas de cobrança recebidas (a entrada das rodadas)
 Cadastros/        # o que foi entregue à supervisão: planilhas por leva, auditorias
 ```
 
+Capturas de investigação do navegador (`*.har`, `*.mitm`) também ficam fora do
+Git: podem ter dado de cliente e credencial.
+
 `data/` e `logs/` são criadas sozinhas; `Planilhas/` e `Cadastros/` são convenção
 de organização, e o programa não depende delas — `--planilha` aceita qualquer
 caminho.
@@ -405,7 +409,9 @@ Nenhum teste toca no Legal One, no Chrome ou no ledger de produção: o Selenium
 temporário. O que está coberto é justamente o que dói quando quebra — a
 interpretação da grade de resultados (em qual pasta a tarefa vai), a leitura da
 página depois do Salvar (o que conta como gravado), o casamento de tipo e
-responsável, as regras de data do Legal One, o `tarefas.toml`, o ledger
+responsável, os seletores e blocos JS do Legal One (`seletores.py`, que só
+reúne os valores observados e não prova que a tela continua igual), as regras
+de data do Legal One, o `tarefas.toml`, o ledger
 (inclusive as migrações de esquema antigo) e as regras que param ou não param a
 fila: disjuntor, `--max-cadastros`, sessão expirada, `Ctrl+C` e erro isolado.
 Os scripts de `scripts/` não têm teste próprio: são finos, e a consulta ao
