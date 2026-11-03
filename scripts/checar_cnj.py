@@ -1,4 +1,4 @@
-"""Barra numero CNJ real em arquivo versionado.
+"""Barra numero CNJ real, e valor do local.toml, em arquivo versionado.
 
 Em 23/10/2026 o repositorio estava publico com 4 numeros de processo reais no
 README, no MANUAL e nos testes. Um numero CNJ inventado quase nunca tem o digito
@@ -14,6 +14,12 @@ Saida: 0 limpo, 1 achou numero, 2 nao conseguiu conferir nada. Nao ter lido
 arquivo nenhum e falha, e nao "limpo": uma checagem que nao olhou nada passaria
 por aprovada.
 
+A segunda regra le o local.toml desta maquina (endereco do Legal One, nomes de
+quem assina as tarefas) e recusa arquivo versionado que traga um daqueles
+valores. Ela so vale onde o local.toml existe, ou seja, no hook de pre-commit:
+a CI nao tem o arquivo. Valor igual ao do local.exemplo.toml nao conta, porque
+e ficticio.
+
 O numero achado sai mascarado no relatorio (so ano, segmento e tribunal), porque
 a saida da CI vira log e o log fica publico junto com o repositorio.
 """
@@ -25,6 +31,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 PERMITIDOS = Path(__file__).resolve().parent / "cnj_permitidos.txt"
+LOCAL = RAIZ / "local.toml"
+EXEMPLO = RAIZ / "local.exemplo.toml"
 
 # NNNNNNN-DD.AAAA.J.TR.OOOO, com ou sem a pontuacao (a planilha e o Legal One
 # trazem das duas formas). Os lookarounds impedem casar 20 digitos no meio de
@@ -71,6 +79,60 @@ def achar(texto: str, permitidos: set[str] = frozenset()) -> list[tuple[int, str
     return achados
 
 
+def _textos_toml(caminho: Path) -> dict[str, str]:
+    """{"secao.chave": valor} de cada texto do TOML ({} sem o arquivo)."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10
+        try:
+            import tomli as tomllib
+        except ModuleNotFoundError:
+            return {}
+    try:
+        with open(caminho, "rb") as f:
+            bruto = tomllib.load(f)
+    except (OSError, ValueError):
+        return {}
+    textos = {}
+
+    def andar(prefixo: str, valor) -> None:
+        if isinstance(valor, dict):
+            for chave, filho in valor.items():
+                andar(f"{prefixo}.{chave}" if prefixo else chave, filho)
+        elif isinstance(valor, str):
+            textos[prefixo] = valor
+    andar("", bruto)
+    return textos
+
+
+def valores_locais(local: Path = LOCAL, exemplo: Path = EXEMPLO) -> dict[str, str]:
+    """{texto proibido: de onde veio} a partir do local.toml.
+
+    De uma URL vale o host: e ele que identifica o escritorio, e aparece sem o
+    https:// em documentacao. Texto curto demais (menos de 6 letras) fica de
+    fora, para "Ana" nao reprovar metade do repositorio.
+    """
+    ficticios = {v.strip().lower() for v in _textos_toml(exemplo).values()}
+    proibidos = {}
+    for chave, valor in _textos_toml(local).items():
+        valor = " ".join(valor.split())
+        if "://" in valor:
+            valor = valor.split("://", 1)[1].split("/", 1)[0]
+        if len(valor) >= 6 and valor.lower() not in ficticios:
+            proibidos[valor.lower()] = chave
+    return proibidos
+
+
+def achar_locais(texto: str, proibidos: dict[str, str]) -> list[tuple[int, str]]:
+    """(numero da linha, de onde veio) de cada valor do local.toml no texto."""
+    achados = []
+    for numero_linha, linha in enumerate(texto.lower().splitlines(), start=1):
+        for valor, chave in proibidos.items():
+            if valor in linha:
+                achados.append((numero_linha, chave))
+    return achados
+
+
 def _git(*args: str) -> bytes:
     return subprocess.run(
         ["git", *args], cwd=RAIZ, check=True, capture_output=True
@@ -102,6 +164,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     permitidos = carregar_permitidos()
+    proibidos = valores_locais()
     lidos = 0
     total = 0
     try:
@@ -114,6 +177,9 @@ def main(argv: list[str] | None = None) -> int:
                 total += 1
                 print(f"{nome}:{numero_linha}: numero CNJ com digito valido "
                       f"{mascarar(digitos)}")
+            for numero_linha, chave in achar_locais(texto, proibidos):
+                total += 1
+                print(f"{nome}:{numero_linha}: valor do local.toml ({chave})")
     except (OSError, subprocess.CalledProcessError) as e:
         print(f"checar_cnj: nao consegui ler os arquivos: {e}", file=sys.stderr)
         return 2
@@ -124,11 +190,13 @@ def main(argv: list[str] | None = None) -> int:
         print("checar_cnj: nenhum arquivo conferido", file=sys.stderr)
         return 2
     if total:
-        print(f"\n{total} numero(s) CNJ que parecem reais. Troque por um numero "
-              "inventado (digito errado) ou, se for sintetico de proposito, "
-              f"inclua em {PERMITIDOS.relative_to(RAIZ)}.")
+        print(f"\n{total} achado(s). Numero CNJ: troque por um inventado (digito "
+              "errado) ou, se for sintetico de proposito, inclua em "
+              f"{PERMITIDOS.relative_to(RAIZ)}. Valor do local.toml: tire do "
+              "arquivo; ele so pode morar no local.toml.")
         return 1
-    print(f"checar_cnj: {lidos} arquivo(s) conferido(s), nenhum CNJ real")
+    extra = f" nem valor do local.toml ({len(proibidos)})" if proibidos else ""
+    print(f"checar_cnj: {lidos} arquivo(s) conferido(s), nenhum CNJ real{extra}")
     return 0
 
 

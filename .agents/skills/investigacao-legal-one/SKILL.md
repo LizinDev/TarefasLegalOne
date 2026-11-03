@@ -1,6 +1,6 @@
 ---
 name: investigacao-legal-one
-description: Investigação por evidência da interface web do Legal One (hasson.novajus.com.br) — seletores, campos do formulário de tarefa, lookups, para onde o Salvar leva e qual requisição ele envia — por inspeção passiva no Chrome DevTools, separando observação, inferência e desconhecido. Use quando uma mudança em src/legalone.py depende de como o Legal One se comporta hoje, ou quando a automação passa a falhar porque a página mudou. Pule para entender o próprio código (leia o repositório), para operar uma rodada (MANUAL.md) e para qualquer coisa que grave no Legal One fora da pasta de teste.
+description: Investigação por evidência da interface web do Legal One (endereço do escritório, em `local.toml`) — seletores, campos do formulário de tarefa, lookups, para onde o Salvar leva e qual requisição ele envia — por inspeção passiva no Chrome DevTools, separando observação, inferência e desconhecido. Use quando uma mudança em src/legalone.py depende de como o Legal One se comporta hoje, ou quando a automação passa a falhar porque a página mudou. Pule para entender o próprio código (leia o repositório), para operar uma rodada (MANUAL.md) e para qualquer coisa que grave no Legal One fora da pasta de teste.
 metadata:
   version: "1"
 ---

@@ -47,9 +47,43 @@ logging.basicConfig(
     handlers=_handlers,
 )
 
+# --- Valores desta instalacao (local.toml, fora do git) ----------------------
+#
+# O endereco do Legal One do escritorio e o nome de quem assina as tarefas nao
+# ficam no repositorio: em 23/10/2026 ele estava publico com os dois. Moram no
+# local.toml, ignorado pelo git; o local.exemplo.toml mostra o formato e e o
+# que os testes usam. TAREFAS_LOCAL aponta para outro arquivo.
+
+ARQUIVO_LOCAL = Path(os.environ.get("TAREFAS_LOCAL") or BASE_DIR / "local.toml")
+SECAO_LEGALONE = "legalone"
+
+
+def carregar_local(caminho: str | Path) -> tuple[dict, str]:
+    """(conteudo, problema) do local.toml. Arquivo ausente nao e excecao aqui:
+    --help e --relatorio funcionam sem ele, e a rodada recusa com o problema."""
+    try:
+        with open(caminho, "rb") as f:
+            return tomllib.load(f), ""
+    except FileNotFoundError:
+        return {}, (f"{caminho} nao existe. Copie o local.exemplo.toml para "
+                    "local.toml e preencha com os valores do escritorio.")
+    except tomllib.TOMLDecodeError as e:
+        return {}, f"{caminho} nao e um TOML valido: {e}"
+
+
+LOCAL, ERRO_LOCAL = carregar_local(ARQUIVO_LOCAL)
+_LEGALONE = LOCAL.get(SECAO_LEGALONE, {}) if isinstance(
+    LOCAL.get(SECAO_LEGALONE), dict) else {}
+
 # --- Legal One / NovaJus -----------------------------------------------------
 
-BASE_URL = "https://hasson.novajus.com.br"
+BASE_URL = str(_LEGALONE.get("endereco", "")).strip().rstrip("/")
+if not ERRO_LOCAL and not BASE_URL:
+    ERRO_LOCAL = f"{ARQUIVO_LOCAL}: falta endereco em [{SECAO_LEGALONE}]"
+
+# Quem assinava toda tarefa gravada ate a 1.7 (ver ledger.VALORES_HISTORICOS).
+RESPONSAVEL_HISTORICO = " ".join(
+    str(_LEGALONE.get("responsavel_historico", "")).split())
 
 # A busca de processos guarda o filtro de status entre sessoes ("salvar criterios
 # de filtros"), e o padrao do usuario e Ativo. Mandar StatusSimples[0] vazio
@@ -90,7 +124,7 @@ class PerfilTarefa:
     status: str = "Cumprido"  # StatusId=1; o padrao do formulario e Pendente (0)
     # Usuario ativo do Legal One. Casa sem ligar para acento e caixa, e pode ser
     # so parte do nome enquanto for o unico usuario que casa (ver catalogo).
-    responsavel: str = "Heloiza Helena de Araujo"
+    responsavel: str = "Fulana Regina de Araujo"   # nome ficticio, so de teste
     # Trecho que deve aparecer no caminho da planilha. Serve de trava contra
     # rodar a planilha de uma tarefa com o perfil da outra. Vazio = sem trava.
     dica_arquivo: str = ""
@@ -206,7 +240,7 @@ NOME_AUTO = "auto"
 NOME_PLANILHA = "planilha"
 # A tarefa de --descricao, sem perfil do arquivo.
 NOME_AVULSA = "avulsa"
-NOMES_RESERVADOS = {NOME_AUTO, NOME_PLANILHA, NOME_AVULSA}
+NOMES_RESERVADOS = {NOME_AUTO, NOME_PLANILHA, NOME_AVULSA, SECAO_LEGALONE}
 
 # Aqui nao ha trava de nome de arquivo, e de proposito: a garantia de nao parear
 # planilha errada com tarefa errada vem da propria celula de cada linha, que e
@@ -229,8 +263,13 @@ class ErroPerfis(ValueError):
     """O tarefas.toml nao descreve perfis validos."""
 
 
-def carregar_perfis(caminho: str | Path) -> dict[str, PerfilTarefa]:
+def carregar_perfis(caminho: str | Path,
+                    local: dict | None = None) -> dict[str, PerfilTarefa]:
     """Le e valida os perfis do arquivo TOML.
+
+    local: o conteudo do local.toml. Uma secao dele com o nome de um perfil
+    completa ou sobrepoe os campos daquele perfil — e assim que o responsavel,
+    que nao fica no repositorio, chega aos perfis de producao.
 
     Tipo, status e responsavel sao obrigatorios em todo perfil do arquivo:
     padrao escondido no codigo e como uma tarefa nova acaba no nome de quem
@@ -245,6 +284,11 @@ def carregar_perfis(caminho: str | Path) -> dict[str, PerfilTarefa]:
         raise ErroPerfis(f"arquivo de perfis nao encontrado: {caminho}")
     except tomllib.TOMLDecodeError as e:
         raise ErroPerfis(f"{caminho} nao e um TOML valido: {e}")
+    for nome, campos in (local or {}).items():
+        if nome != SECAO_LEGALONE and isinstance(campos, dict):
+            base = bruto.setdefault(nome, {})
+            if isinstance(base, dict):
+                base.update(campos)
 
     perfis: dict[str, PerfilTarefa] = {}
     problemas: list[str] = []
@@ -261,7 +305,9 @@ def carregar_perfis(caminho: str | Path) -> dict[str, PerfilTarefa]:
             problemas.append(f"[{nome}]: campo(s) desconhecido(s) "
                              f"{sorted(desconhecidos)}")
         if faltando:
-            problemas.append(f"[{nome}]: falta {', '.join(faltando)}")
+            onde = (" (o responsavel fica no local.toml)"
+                    if "responsavel" in faltando else "")
+            problemas.append(f"[{nome}]: falta {', '.join(faltando)}{onde}")
         if desconhecidos or faltando:
             continue
         status = status_canonico(campos["status"])
@@ -295,7 +341,7 @@ def carregar_perfis(caminho: str | Path) -> dict[str, PerfilTarefa]:
 # Arquivo com problema nao derruba o import: --help e --relatorio nao precisam
 # de perfil, e a rodada transforma ERRO_PERFIS em erro de uso (codigo 2).
 try:
-    PERFIS = carregar_perfis(ARQUIVO_PERFIS)
+    PERFIS = carregar_perfis(ARQUIVO_PERFIS, LOCAL)
     ERRO_PERFIS = ""
 except ErroPerfis as _e:
     PERFIS = {}

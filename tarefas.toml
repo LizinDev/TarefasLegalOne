@@ -11,7 +11,10 @@
 #   status        Pendente, Cumprido, Não cumprido, Cancelado, Iniciado ou
 #                 Recusado (acento e caixa nao importam).
 #   responsavel   usuario ativo do Legal One. Basta parte do nome enquanto so
-#                 um usuario casar.
+#                 um usuario casar. Nos perfis daqui ele NAO fica neste arquivo,
+#                 que e versionado: vem da secao de mesmo nome no local.toml
+#                 (ver local.exemplo.toml). Perfil sem responsavel nem la nao
+#                 roda.
 #   dica_arquivo  (opcional) trecho que precisa aparecer no caminho da planilha.
 #                 E a trava contra rodar a planilha de uma tarefa com o perfil
 #                 de outra.
@@ -27,12 +30,10 @@
 descricao = "FATURAMENTO FINAL"
 tipo = "Diversos"
 status = "Cumprido"
-responsavel = "Heloiza Helena de Araujo"
 dica_arquivo = "Faturamento"
 
 [defesa-faturada]
 descricao = "DEFESA FATURADA"
 tipo = "Diversos"
 status = "Cumprido"
-responsavel = "Heloiza Helena de Araujo"
 dica_arquivo = "Defesa"

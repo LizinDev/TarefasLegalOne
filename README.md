@@ -1,7 +1,7 @@
 # Cadastro de tarefas em lote — Legal One
 
 Cadastra tarefas em lote nos processos listados numa planilha de cobranças,
-direto no Legal One (`hasson.novajus.com.br`), via Selenium.
+direto no Legal One do escritório (endereço no `local.toml`), via Selenium.
 
 Para cada linha da planilha o programa busca o processo pelo número CNJ, abre o
 formulário de nova tarefa e preenche descrição, tipo, status, responsável e
@@ -29,8 +29,8 @@ Os dois perfis de produção têm os valores de sempre:
 
 | Perfil | Descrição | Tipo | Status | Responsável | Exige no nome da planilha |
 | --- | --- | --- | --- | --- | --- |
-| `faturamento-final` | `FATURAMENTO FINAL` | `Diversos` | `Cumprido` | `Heloiza Helena de Araujo` | `Faturamento` |
-| `defesa-faturada` | `DEFESA FATURADA` | `Diversos` | `Cumprido` | `Heloiza Helena de Araujo` | `Defesa` |
+| `faturamento-final` | `FATURAMENTO FINAL` | `Diversos` | `Cumprido` | do `local.toml` | `Faturamento` |
+| `defesa-faturada` | `DEFESA FATURADA` | `Diversos` | `Cumprido` | do `local.toml` | `Defesa` |
 
 ### Por que perfis num arquivo, e por que exigir tanto
 
@@ -42,8 +42,16 @@ responsável são **obrigatórios** em cada perfil, e chave desconhecida é erro
 cairia num padrão que ninguém escolheu. Arquivo com problema vira código 2
 antes de a rodada começar.
 
+O que identifica o escritório e as pessoas fica **fora** do repositório, no
+`local.toml` (ignorado pelo git; o formato está em `local.exemplo.toml`): o
+endereço do Legal One e o responsável de cada perfil. Uma seção do `local.toml`
+com o nome de um perfil completa aquele perfil. Em 23/10/2026 o repositório
+estava público com esses dados; desde então eles só existem em cada máquina, e o
+hook de pre-commit recusa o commit que trouxer um valor do `local.toml`. Sem o
+arquivo, a rodada e a auditoria terminam com código 2 dizendo o que falta.
+
 Pela mesma razão, a tarefa avulsa (`--descricao`) **exige** `--status` e
-`--responsavel`: uma tarefa nova que caísse em Cumprido e no nome da Heloiza
+`--responsavel`: uma tarefa nova que caísse em Cumprido e no nome de alguém
 por esquecimento passaria por certa.
 
 As colunas do modo planilha levam o sufixo `DA TAREFA` de propósito, e o modo
@@ -311,7 +319,8 @@ fato enviado ao formulário — e não do perfil. Antes da versão 1.8 o ledger
 guardava só a descrição e a planilha reconstruía o resto pelo perfil; com
 tarefas que podem variar de uma rodada para outra, isso descreveria a tarefa
 de hoje, e não a que foi cadastrada. Os registros anteriores à 1.8 recebem
-Diversos / Cumprido / Heloiza na migração (eram os valores fixos de então), e
+Diversos / Cumprido e o `responsavel_historico` do `local.toml` na migração
+(eram os valores fixos de então), e
 ficam com as datas em branco: a rodada não as guardava, e deduzi-las do horário
 do cadastro erraria justamente nos cadastros feitos depois da meia-noite.
 
@@ -471,7 +480,7 @@ Enquanto for privado ele aparece como pulado, não como falha.
   pedidas são escritas depois e conferidas de novo logo antes do Salvar.
 - **As listas de tipos e usuários vêm dos próprios endpoints dos lookups**
   (`LookupTreeTiposTarefa`, `LookupGridUsuario`), por `fetch` dentro da aba,
-  com a sessão do Chrome. A aba precisa estar no `hasson.novajus.com.br`: a raiz
+  com a sessão do Chrome. A aba precisa estar no endereço do escritório (`*.novajus.com.br`): a raiz
   dele redireciona para `firm.legalone.com.br`, e um `fetch` relativo dali pedia
   a lista ao host errado.
 - **Cadastro gravado é o que sai do formulário para outra página.** O Legal One

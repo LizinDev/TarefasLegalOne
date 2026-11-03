@@ -1,0 +1,19 @@
+# Valores desta instalacao. Copie para local.toml (que o git ignora) e troque
+# pelos do escritorio. Os valores abaixo sao ficticios; os testes rodam com eles.
+#
+# Nada daqui pode ir para um arquivo versionado: o hook de pre-commit
+# (scripts/checar_cnj.py) recusa o commit que trouxer um valor do seu local.toml.
+
+[legalone]
+# Endereco do Legal One do escritorio, sem barra no fim.
+endereco = "https://escritorio.novajus.com.br"
+# Quem assinava toda tarefa gravada ate a 1.7. So serve para preencher o
+# historico do ledger; pode ficar de fora numa instalacao nova.
+responsavel_historico = "Fulana Regina de Araujo"
+
+# Uma secao com o nome de um perfil do tarefas.toml completa aquele perfil.
+[faturamento-final]
+responsavel = "Fulana Regina de Araujo"
+
+[defesa-faturada]
+responsavel = "Fulana Regina de Araujo"

@@ -78,7 +78,7 @@ def test_erro_pode_virar_ok(registro):
 
 
 TAREFA_ENVIADA = {"tipo": "Diversos", "status": "Cumprido",
-                  "responsavel": "Heloiza Helena de Araujo",
+                  "responsavel": "Fulana Regina de Araujo",
                   "data_inicio": "29/09/2026", "data_fim": "29/09/2026",
                   "data_publicacao": "25/09/2026",
                   "data_disponibilizacao": "24/09/2026"}
@@ -476,7 +476,7 @@ def test_historico_ganha_os_valores_das_duas_tarefas_antigas(tmp_path):
 
     with ledger_mod.Ledger(caminho) as led:
         campos = _campos_da_tarefa(led, CNJ, DEFESA)
-        # Tudo o que foi cadastrado ate a 1.7 era Diversos / Cumprido / Heloiza.
+        # Tudo o que foi cadastrado ate a 1.7 era Diversos / Cumprido / Fulana.
         assert campos == {**ledger_mod.VALORES_HISTORICOS,
                           "data_inicio": None, "data_fim": None,
                           "data_publicacao": None, "data_disponibilizacao": None}
@@ -574,3 +574,20 @@ def test_cadastrados_entre_recorta_a_leva_por_horario(registro):
     assert [linha[0] for linha in leva] == ["B", "C"]
     # O dia continua sendo o mesmo recorte, de meia-noite a meia-noite.
     assert [linha[0] for linha in registro.cadastrados_em("2026-09-10")] == ["C", "E"]
+
+
+def test_sem_responsavel_historico_a_coluna_fica_em_branco(tmp_path, monkeypatch):
+    # Instalacao sem responsavel_historico no local.toml: melhor NULL no
+    # relatorio do que um nome que ninguem confirmou.
+    monkeypatch.setitem(ledger_mod.VALORES_HISTORICOS, "responsavel", None)
+    caminho = tmp_path / "ledger.sqlite3"
+    _criar_ledger_antigo(
+        caminho, ESQUEMA_V3,
+        (CNJ, DEFESA, "ok", "111", "cadastrada", "2026!L2", "DEFESA FATURADA",
+         "Ativo", "2026-09-10T20:21:01", CNJ),
+    )
+
+    with ledger_mod.Ledger(caminho) as led:
+        campos = _campos_da_tarefa(led, CNJ, DEFESA)
+    assert campos["tipo"] == "Diversos"
+    assert campos["responsavel"] is None

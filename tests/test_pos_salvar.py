@@ -6,10 +6,11 @@ data passada viravam cadastro fantasma.
 """
 import pytest
 
+import config
 import legalone
 from legalone import PEDIU_CONFIRMACAO, RECUSOU, SALVOU, situacao_pos_salvar
 
-BASE = "https://hasson.novajus.com.br"
+BASE = config.BASE_URL
 FORMULARIO = BASE + "/processos/tarefas/CreateFromProcesso/118827"
 DEVOLVIDO = BASE + "/processos/tarefas/Edit"
 AVISO = ("A data de \"Início\" do compromisso ou de \"Conclusão\" da tarefa é "

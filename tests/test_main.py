@@ -390,7 +390,7 @@ def test_planilha_do_dia_marca_o_recadastro(registro, dados_tmp):
 def test_planilha_do_dia_mostra_a_tarefa_gravada_no_ledger(registro, dados_tmp):
     # Os valores saem do que foi enviado, e nao do perfil de hoje: uma tarefa
     # Pendente com outro responsavel precisa aparecer assim, mesmo com a mesma
-    # descricao de um perfil que diz Cumprido/Heloiza.
+    # descricao de um perfil que diz Cumprido/Fulana.
     registro.con.execute(
         "INSERT INTO processos (cnj, tarefa, situacao, id_legalone, quando, "
         "  tipo, status, responsavel, data_inicio, data_fim) "
@@ -537,7 +537,7 @@ def test_rodada_completa_da_planilha_aos_relatorios(dados_tmp, monkeypatch, tmp_
     # Os valores fixos da tarefa sao repetidos em toda linha de proposito.
     assert ws["C2"].value == "FATURAMENTO FINAL"
     assert ws["D2"].value == "Cumprido"
-    assert ws["F2"].value == "Heloiza Helena de Araujo"
+    assert ws["F2"].value == "Fulana Regina de Araujo"
 
 
 def test_retomada_pula_o_que_ja_foi_e_preserva_a_lista_de_conferencia(
@@ -659,13 +659,13 @@ def test_simulacao_nao_apaga_a_lista_das_rodadas_de_verdade(
 def test_resolver_perfis_reescreve_como_o_legal_one_escreve():
     pedido = config.PerfilTarefa("teste", "TAREFA X",
                                  tipo="diversos > contato telefonico",
-                                 responsavel="heloiza")
+                                 responsavel="fulana")
 
     resolucao = main._resolver_perfis(AutomadorFalso(), [pedido])
 
     perfil = resolucao.aplicar(pedido)
     assert (perfil.tipo, perfil.tipo_id, perfil.responsavel) == (
-        "Diversos / Contato Telefônico", "subtipo_9", "Heloiza Helena de Araujo")
+        "Diversos / Contato Telefônico", "subtipo_9", "Fulana Regina de Araujo")
 
 
 def test_resolver_perfis_junta_todos_os_problemas_numa_mensagem():
@@ -688,7 +688,7 @@ def test_perfis_de_verdade_passam_pela_conferencia():
 
     for perfil in map(resolucao.aplicar, perfis):
         assert (perfil.tipo_id, perfil.responsavel) == (
-            "tipo_4", "Heloiza Helena de Araujo")
+            "tipo_4", "Fulana Regina de Araujo")
 
 
 def test_rodada_envia_a_tarefa_conferida(dados_tmp, monkeypatch, tmp_path):
@@ -733,8 +733,8 @@ def test_so_buscar_nao_depende_da_conferencia(dados_tmp, monkeypatch, tmp_path):
 
 # --- de onde vem a tarefa: perfil, flags, avulsa, coluna ---------------------
 
-PEDRO = "Pedro Henrique Braz Moreira"
-NATHALIA = "Nathalia Maria Gatto Pinto"
+BELTRANO = "Beltrano Augusto Lima"
+CICLANA = "Ciclana Maria Rocha Pinto"
 
 
 def _args(*argv):
@@ -743,30 +743,30 @@ def _args(*argv):
 
 def test_flags_sobrepoem_o_perfil_sem_perder_descricao_e_trava():
     perfil = main._perfil_da_rodada(_args("--tarefa", "defesa-faturada",
-                                          "--responsavel", NATHALIA))
+                                          "--responsavel", CICLANA))
 
     assert (perfil.descricao, perfil.status, perfil.responsavel,
-            perfil.dica_arquivo) == ("DEFESA FATURADA", "Cumprido", NATHALIA,
+            perfil.dica_arquivo) == ("DEFESA FATURADA", "Cumprido", CICLANA,
                                      "Defesa")
 
 
 def test_tarefa_avulsa():
     perfil = main._perfil_da_rodada(_args(
         "--descricao", "  CONFERIR   CUSTAS ", "--status", "pendente",
-        "--responsavel", PEDRO))
+        "--responsavel", BELTRANO))
 
     assert (perfil.nome, perfil.descricao, perfil.tipo, perfil.status,
             perfil.responsavel, perfil.dica_arquivo) == (
-        config.NOME_AVULSA, "CONFERIR CUSTAS", "Diversos", "Pendente", PEDRO, "")
+        config.NOME_AVULSA, "CONFERIR CUSTAS", "Diversos", "Pendente", BELTRANO, "")
 
 
 @pytest.mark.parametrize("falta, argv", [
-    ("--status", ["--responsavel", PEDRO]),
+    ("--status", ["--responsavel", BELTRANO]),
     ("--responsavel", ["--status", "Cumprido"]),
     ("--status e --responsavel", []),
 ])
 def test_tarefa_avulsa_exige_status_e_responsavel(falta, argv):
-    # Sem padrao escondido: uma tarefa nova nao cai em Cumprido/Heloiza.
+    # Sem padrao escondido: uma tarefa nova nao cai em Cumprido/Fulana.
     with pytest.raises(main.ErroDeUso, match=falta):
         main._perfil_da_rodada(_args("--descricao", "X", *argv))
 
@@ -775,7 +775,7 @@ def test_descricao_nao_combina_com_tarefa():
     with pytest.raises(main.ErroDeUso, match="nao combine com --tarefa"):
         main._perfil_da_rodada(_args("--tarefa", "defesa-faturada",
                                      "--descricao", "X", "--status", "Cumprido",
-                                     "--responsavel", PEDRO))
+                                     "--responsavel", BELTRANO))
 
 
 def test_status_invalido_para_na_cli():
@@ -795,11 +795,11 @@ def test_modo_auto_aplica_as_flags_em_cada_perfil(registro):
     processos = [processo("A", tarefa="DEFESA FATURADA"),
                  processo("B", tarefa="FATURAMENTO FINAL")]
 
-    main._atribuir_perfis(_args("--tarefa", "auto", "--responsavel", PEDRO),
+    main._atribuir_perfis(_args("--tarefa", "auto", "--responsavel", BELTRANO),
                           config.PERFIL_AUTO, processos)
 
     assert [(p.perfil.descricao, p.perfil.responsavel) for p in processos] == [
-        ("DEFESA FATURADA", PEDRO), ("FATURAMENTO FINAL", PEDRO)]
+        ("DEFESA FATURADA", BELTRANO), ("FATURAMENTO FINAL", BELTRANO)]
 
 
 def _da_planilha(cnj, descricao, tipo="", status="", responsavel=""):
@@ -812,7 +812,7 @@ def test_modo_planilha_linha_ganha_de_flag_que_ganha_de_perfil():
     processos = [
         # Tudo na linha.
         _da_planilha("A", "CONFERIR CUSTAS", "Diversos / Contato Telefônico",
-                     "Pendente", NATHALIA),
+                     "Pendente", CICLANA),
         # Linha sem responsavel: vale a flag.
         _da_planilha("B", "CONFERIR CUSTAS", status="Pendente"),
         # Descricao de um perfil, escrita de outro jeito: o perfil completa o
@@ -820,21 +820,21 @@ def test_modo_planilha_linha_ganha_de_flag_que_ganha_de_perfil():
         _da_planilha("C", "defesa  faturada"),
     ]
 
-    main._atribuir_perfis(_args("--tarefa", "planilha", "--responsavel", PEDRO),
+    main._atribuir_perfis(_args("--tarefa", "planilha", "--responsavel", BELTRANO),
                           config.PERFIL_PLANILHA, processos)
 
     assert [(p.tarefa, p.perfil.tipo, p.perfil.status, p.perfil.responsavel)
             for p in processos] == [
-        ("CONFERIR CUSTAS", "Diversos / Contato Telefônico", "Pendente", NATHALIA),
-        ("CONFERIR CUSTAS", "Diversos", "Pendente", PEDRO),
-        ("DEFESA FATURADA", "Diversos", "Cumprido", PEDRO),
+        ("CONFERIR CUSTAS", "Diversos / Contato Telefônico", "Pendente", CICLANA),
+        ("CONFERIR CUSTAS", "Diversos", "Pendente", BELTRANO),
+        ("DEFESA FATURADA", "Diversos", "Cumprido", BELTRANO),
     ]
 
 
 def test_modo_planilha_linha_incompleta_e_erro_com_a_origem():
-    processos = [_da_planilha("A", "CONFERIR CUSTAS", responsavel=PEDRO),
+    processos = [_da_planilha("A", "CONFERIR CUSTAS", responsavel=BELTRANO),
                  _da_planilha("B", "CONFERIR CUSTAS", status="Feito",
-                              responsavel=PEDRO)]
+                              responsavel=BELTRANO)]
 
     with pytest.raises(main.ErroDeUso) as erro:
         main._atribuir_perfis(_args("--tarefa", "planilha"),
@@ -852,8 +852,8 @@ def test_rodada_no_modo_planilha_ponta_a_ponta(dados_tmp, monkeypatch, tmp_path)
     ws.append(["PROCESSO", "DESCRIÇÃO DA TAREFA", "TIPO DA TAREFA",
                "STATUS DA TAREFA", "RESPONSÁVEL DA TAREFA"])
     ws.append([ACHADO, "CONFERIR CUSTAS", "diversos > contato telefonico",
-               "pendente", "nathalia"])
-    ws.append([CORRIGIDO, "CONFERIR CUSTAS", None, "Cumprido", "pedro"])
+               "pendente", "ciclana"])
+    ws.append([CORRIGIDO, "CONFERIR CUSTAS", None, "Cumprido", "beltrano"])
     arq = tmp_path / "Tarefas.xlsx"
     wb.save(arq)
     automador = AutomadorFalso({ACHADO: achou("111"), CORRIGIDO: achou("222")})
@@ -867,18 +867,18 @@ def test_rodada_no_modo_planilha_ponta_a_ponta(dados_tmp, monkeypatch, tmp_path)
     assert [(t.descricao, t.tipo, t.tipo_id, t.status, t.responsavel)
             for t in automador.enviadas] == [
         ("CONFERIR CUSTAS", "Diversos / Contato Telefônico", "subtipo_9",
-         "Pendente", NATHALIA),
-        ("CONFERIR CUSTAS", "Diversos", "tipo_4", "Cumprido", PEDRO),
+         "Pendente", CICLANA),
+        ("CONFERIR CUSTAS", "Diversos", "tipo_4", "Cumprido", BELTRANO),
     ]
     relatorio = {linha["PROCESSO"]: linha
                  for linha in _linhas_csv(dados_tmp / "relatorio.csv")}
-    assert relatorio[ACHADO]["RESPONSAVEL"] == NATHALIA
+    assert relatorio[ACHADO]["RESPONSAVEL"] == CICLANA
     assert relatorio[ACHADO]["TIPO_TAREFA"] == "Diversos / Contato Telefônico"
     assert relatorio[CORRIGIDO]["STATUS_TAREFA"] == "Cumprido"
 
 
 def test_data_mal_escrita_numa_linha_e_erro_com_a_origem():
-    proc = _da_planilha("A", "CONFERIR CUSTAS", status="Pendente", responsavel=PEDRO)
+    proc = _da_planilha("A", "CONFERIR CUSTAS", status="Pendente", responsavel=BELTRANO)
     proc.campos_tarefa["inicio"] = "31/02/2026"
 
     with pytest.raises(main.ErroDeUso, match="inicio") as erro:
@@ -896,9 +896,9 @@ def test_rodada_com_datas_da_linha_e_da_cli(dados_tmp, monkeypatch, tmp_path):
                "RESPONSÁVEL DA TAREFA", "INÍCIO DA TAREFA",
                "PUBLICAÇÃO DA TAREFA"])
     amanha = datetime.date.today() + datetime.timedelta(days=1)
-    ws.append([ACHADO, "CONFERIR CUSTAS", "Pendente", "pedro",
+    ws.append([ACHADO, "CONFERIR CUSTAS", "Pendente", "beltrano",
                datetime.datetime.combine(amanha, datetime.time(16, 0)), None])
-    ws.append([CORRIGIDO, "CONFERIR CUSTAS", "Pendente", "pedro", None,
+    ws.append([CORRIGIDO, "CONFERIR CUSTAS", "Pendente", "beltrano", None,
                "25/09/2026"])
     arq = tmp_path / "Tarefas.xlsx"
     wb.save(arq)
@@ -940,3 +940,14 @@ def test_chrome_ocupado_nao_comeca_e_diz_quem_usa(
     ) == main.SAIDA_ABORTADA
     assert "auditar.py, PID 42" in caplog.text
     assert "remote-debugging-port" not in caplog.text  # nao manda abrir o Chrome
+
+
+def test_sem_local_toml_e_erro_de_uso_antes_do_chrome(dados_tmp, monkeypatch, caplog):
+    monkeypatch.setattr(config, "ERRO_LOCAL", "local.toml nao existe. Copie o "
+                        "local.exemplo.toml")
+    def nao_deveria_conectar():
+        raise AssertionError("conectou sem configuracao local")
+    monkeypatch.setattr(main.legalone, "conectar", nao_deveria_conectar)
+
+    assert main.main(["--planilha", "x.xlsx"]) == main.SAIDA_USO
+    assert "local.exemplo.toml" in caplog.text

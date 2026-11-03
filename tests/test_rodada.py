@@ -49,9 +49,9 @@ ARVORE = catalogo.tipos_da_arvore([
      "Path": "[Cível] Prazos / Audiência"},
 ])
 
-USUARIOS = ["Heloiza Helena de Araujo", "Ana Clara Stroparo",
-            "Ana Luiza Saitone Costa", "Pedro Henrique Braz Moreira",
-            "Nathalia Maria Gatto Pinto"]
+USUARIOS = ["Fulana Regina de Araujo", "Ana Clara Exemplo",
+            "Ana Luiza Modelo Costa", "Beltrano Augusto Lima",
+            "Ciclana Maria Rocha Pinto"]
 
 
 class AutomadorFalso:

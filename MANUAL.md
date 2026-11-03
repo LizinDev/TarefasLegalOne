@@ -24,9 +24,14 @@ operar*.
 ### Instalação
 
 ```powershell
-cd C:\Users\Kamila\projetos\FaturamentoLegalOne
+cd C:\caminho\do\TarefasLegalOne
 pip install -r requirements.txt
+copy local.exemplo.toml local.toml
 ```
+
+Depois abra o `local.toml` e troque os valores fictícios pelos do escritório:
+o endereço do Legal One e o responsável de cada perfil. Ele fica só nesta
+máquina (o git o ignora) e nada dele pode ir para um arquivo versionado.
 
 Precisa de Python 3.10 ou mais novo (o código usa `str | Path` e `set[str]`).
 No 3.10 o `requirements.txt` instala também o `tomli`, que lê o `tarefas.toml`;
@@ -76,7 +81,7 @@ As planilhas recebidas ficam em `Planilhas\`, na raiz do projeto (ver
 **Faturamento:**
 
 ```powershell
-cd C:\Users\Kamila\projetos\FaturamentoLegalOne\src
+cd C:\caminho\do\TarefasLegalOne\src
 python main.py --planilha "..\Planilhas\Faturamento 2024.xlsx" --executar
 ```
 
@@ -103,7 +108,7 @@ Aqui cada linha recebe a tarefa que a coluna da cobrança indica. Ver
 
 ```powershell
 # avulsa, só nesta rodada
-python main.py --planilha "..\Planilhas\Custas.xlsx" --descricao "CONFERIR CUSTAS" --status Pendente --responsavel "Nathalia Maria Gatto Pinto" --data 01/10/2026
+python main.py --planilha "..\Planilhas\Custas.xlsx" --descricao "CONFERIR CUSTAS" --status Pendente --responsavel "Ciclana Maria Rocha Pinto" --data 01/10/2026
 # ou a planilha diz a tarefa de cada linha
 python main.py --planilha "..\Planilhas\Tarefas.xlsx" --tarefa planilha
 ```
@@ -261,7 +266,7 @@ exige `--status` e `--responsavel` (sem eles, código 2). `--tipo` é opcional e
 vale `Diversos`. Não combina com `--tarefa`.
 
 ```powershell
-python main.py --planilha "..." --descricao "CONFERIR CUSTAS" --tipo "Diversos" --status Pendente --responsavel "Nathalia Maria Gatto Pinto"
+python main.py --planilha "..." --descricao "CONFERIR CUSTAS" --tipo "Diversos" --status Pendente --responsavel "Ciclana Maria Rocha Pinto"
 ```
 
 Com um perfil, `--tipo`, `--status` e `--responsavel` sobrepõem o perfil **só
@@ -269,7 +274,7 @@ nesta rodada** — a descrição e a trava de nome de arquivo continuam as do
 perfil. Com `--tarefa auto`, valem para todos os perfis da planilha.
 
 ```powershell
-python main.py --planilha "..\Defesa.xlsx" --tarefa defesa-faturada --responsavel "Nathalia Maria Gatto Pinto"
+python main.py --planilha "..\Defesa.xlsx" --tarefa defesa-faturada --responsavel "Ciclana Maria Rocha Pinto"
 ```
 
 `--status` aceita sem acento e em qualquer caixa (`nao cumprido`). O tipo e o
@@ -306,8 +311,8 @@ pedem. **Confira antes de `--executar`**: é ali que aparece uma coluna de
 responsável trocada ou um status errado na planilha inteira.
 
 ```
-Tarefa:      'CONFERIR CUSTAS' / tipo 'Diversos' / status 'Pendente' / responsavel 'nathalia': 212 processo(s)
-Tarefa:      'FATURAMENTO FINAL' / tipo 'Diversos' / status 'Cumprido' / responsavel 'Heloiza Helena de Araujo': 40 processo(s)
+Tarefa:      'CONFERIR CUSTAS' / tipo 'Diversos' / status 'Pendente' / responsavel 'ciclana': 212 processo(s)
+Tarefa:      'FATURAMENTO FINAL' / tipo 'Diversos' / status 'Cumprido' / responsavel 'Fulana Regina de Araujo': 40 processo(s)
 ```
 
 O mesmo processo pode pedir tarefas diferentes em linhas diferentes. Mas a
@@ -507,6 +512,8 @@ Combinações que o programa recusa:
 | `--tarefa planilha` sem a coluna `DESCRIÇÃO DA TAREFA`, ou com linha incompleta | Encerra com código 2, listando as linhas |
 | início depois da conclusão; Pendente com conclusão no passado | Encerra com código 2, listando as linhas |
 | `tarefas.toml` com problema | Encerra com código 2 (`--help` e `--relatorio` seguem funcionando) |
+| `local.toml` ausente, ou sem `endereco` em `[legalone]` | Encerra com código 2 (idem) |
+| perfil sem `responsavel` nem no `tarefas.toml` nem no `local.toml` | Encerra com código 2 (idem) |
 | tipo ou responsável que não casa com o Legal One | Encerra com código 2, antes do primeiro cadastro |
 
 Combinações inofensivas, que só rendem um aviso e seguem:
@@ -554,7 +561,8 @@ python main.py --planilha "..." --limite 5
 ## Pastas e arquivos
 
 Versionados no Git: o código (`src/`), os testes, os scripts de operação
-(`scripts/`) e os perfis (`tarefas.toml`). O resto fica **só nesta máquina** e
+(`scripts/`) e os perfis (`tarefas.toml`, sem os nomes). O `local.toml` (endereço do
+Legal One e responsáveis) e o resto ficam **só nesta máquina** e
 não vai para o Git — contém números de processo e nomes de clientes:
 
 | Pasta | O que guarda |
@@ -638,28 +646,36 @@ sumirem em silêncio.
 
 Ficam no **`tarefas.toml`**, na raiz do projeto — uma seção por perfil, e o
 nome da seção é o que se escreve em `--tarefa`. Para criar uma tarefa
-recorrente ou mudar responsável, status ou tipo de uma existente, é lá; não é
-preciso mexer em Python.
+recorrente ou mudar status ou tipo de uma existente, é lá; não é preciso mexer
+em Python. O **responsável** é a exceção: nome de pessoa não vai para o
+repositório, então ele fica numa seção de mesmo nome no `local.toml`, que
+completa o perfil.
 
 ```toml
+# tarefas.toml (versionado)
 [defesa-faturada]
 descricao = "DEFESA FATURADA"
 tipo = "Diversos"
 status = "Cumprido"
-responsavel = "Heloiza Helena de Araujo"
 dica_arquivo = "Defesa"
 
 [conferir-custas]
 descricao = "CONFERIR CUSTAS"
 tipo = "Diversos / Contato Telefônico"
 status = "Pendente"
-responsavel = "Nathalia Maria Gatto Pinto"
+
+# local.toml (só nesta máquina)
+[defesa-faturada]
+responsavel = "Fulana Regina de Araujo"
+
+[conferir-custas]
+responsavel = "Ciclana Maria Rocha Pinto"
 ```
 
 `descricao`, `tipo`, `status` e `responsavel` são obrigatórios; `dica_arquivo` é
 opcional. Campo que falta, campo desconhecido (`responsável` com acento, por
 exemplo), status que não existe, duas seções com a mesma descrição ou uma seção
-chamada `auto`, `planilha` ou `avulsa` fazem **toda rodada** terminar com código
+chamada `auto`, `planilha`, `avulsa` ou `legalone` fazem **toda rodada** terminar com código
 2, com a lista dos problemas — `--help` e `--relatorio` continuam funcionando.
 
 Mudar um perfil só afeta os cadastros **daqui para a frente**. Desde a 1.8 o
@@ -687,7 +703,7 @@ arquivo, das flags ou da planilha —, uma vez cada. O log mostra o resultado:
 
 ```
 Conferido:   tipo 'Diversos > Contato Telefonico' -> 'Diversos / Contato Telefônico' (subtipo_9)
-Conferido:   responsavel 'nathalia' -> 'Nathalia Maria Gatto Pinto'
+Conferido:   responsavel 'ciclana' -> 'Ciclana Maria Rocha Pinto'
 ```
 
 Se um tipo não existe, se o nome do tipo aparece sob mais de um pai
@@ -698,7 +714,7 @@ que existe:
 ```
 Tarefa que nao da para cadastrar no Legal One:
   tipo 'Prazos / Apelacao' nao existe no Legal One. Parecidos: '[Cível] Prazos / Apelação'; ... [em 'TAREFA X']
-  responsavel 'Ana' casa com mais de um usuario; escreva o nome completo: 'Ana Clara Stroparo'; ... [em 'TAREFA Y']
+  responsavel 'Ana' casa com mais de um usuario; escreva o nome completo: 'Ana Clara Exemplo'; ... [em 'TAREFA Y']
 ```
 
 Nunca se escolhe um "mais parecido": errar o tipo ou a pessoa criaria centenas

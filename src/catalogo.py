@@ -141,8 +141,8 @@ def resolver_usuario(pedido: str, nomes: list[str]) -> str:
     """O nome exato do usuario pedido, entre os que a busca devolveu.
 
     Vale o nome igual (sem ligar para acento e caixa) ou, na falta dele, o
-    unico resultado da busca — "Heloiza" acha "Heloiza Helena de Araujo". Se
-    um dia entrar outra Heloiza, o pedido passa a ser ambiguo e a rodada para
+    unico resultado da busca — "Fulana" acha "Fulana Regina de Araujo". Se
+    um dia entrar outra Fulana, o pedido passa a ser ambiguo e a rodada para
     com a lista, em vez de escolher uma das duas.
     """
     alvo = normalizar(pedido)

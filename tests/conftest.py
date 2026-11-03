@@ -13,6 +13,10 @@ import pytest
 # Antes do import do config, que configura o logging: teste nao escreve no log
 # de producao.
 os.environ["FATURAMENTO_LOG_FILE"] = ""
+# Os testes usam os valores ficticios do exemplo, e nunca o local.toml da
+# maquina: com ele, o resultado dependeria de quem roda.
+os.environ["TAREFAS_LOCAL"] = str(
+    Path(__file__).resolve().parent.parent / "local.exemplo.toml")
 
 RAIZ = Path(__file__).resolve().parent.parent
 SRC = RAIZ / "src"

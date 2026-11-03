@@ -17,6 +17,8 @@ from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import config
+
 logger = logging.getLogger(__name__)
 
 OK = "ok"
@@ -88,8 +90,9 @@ TAREFA_HISTORICA = "FATURAMENTO FINAL"
 
 # Valores de toda tarefa gravada antes de o ledger guardar tipo, status e
 # responsavel: ate a versao 1.7 so existiam FATURAMENTO FINAL e DEFESA FATURADA,
-# ambas Diversos / Cumprido / Heloiza. Sem preencher o historico, a planilha de
-# um dia antigo refeita com --relatorio sairia com essas colunas em branco.
+# ambas Diversos / Cumprido, no nome de uma so pessoa. Sem preencher o
+# historico, a planilha de um dia antigo refeita com --relatorio sairia com
+# essas colunas em branco.
 # A data nao entra: a rodada nao a guardava, e chutar pela coluna `quando`
 # erraria justamente nos cadastros de depois da meia-noite.
 #
@@ -97,10 +100,14 @@ TAREFA_HISTORICA = "FATURAMENTO FINAL"
 # por codigo anterior a 1.8, que nao conhece essas colunas. A 1.8 grava '' quando
 # nao sabe um valor. Por isso ele roda a cada abertura, e nao so quando a coluna
 # nasce — uma maquina ainda na 1.7 continua gravando no ledger ja migrado.
+#
+# O nome da pessoa vem do local.toml (responsavel_historico), porque nao fica no
+# repositorio. Sem ele, a coluna responsavel do historico fica como esta (NULL):
+# melhor em branco no relatorio do que com um nome inventado.
 VALORES_HISTORICOS = {
     "tipo": "Diversos",
     "status": "Cumprido",
-    "responsavel": "Heloiza Helena de Araujo",
+    "responsavel": config.RESPONSAVEL_HISTORICO or None,
 }
 
 # Colunas acrescentadas depois que ja havia ledger em producao. Sao opcionais,
@@ -225,6 +232,8 @@ class Ledger:
         """
         preenchidas = 0
         for nome, valor in VALORES_HISTORICOS.items():
+            if valor is None:
+                continue
             preenchidas += self.con.execute(
                 f"UPDATE processos SET {nome} = ? WHERE {nome} IS NULL", (valor,)
             ).rowcount

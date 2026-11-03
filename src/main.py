@@ -120,10 +120,10 @@ def argumentos(argv: list[str] | None = None) -> argparse.Namespace:
 
   # uma tarefa que nao esta no tarefas.toml
   python main.py --planilha "..." --descricao "CONFERIR CUSTAS" \\
-      --tipo "Diversos" --status Pendente --responsavel "Nathalia Maria Gatto Pinto"
+      --tipo "Diversos" --status Pendente --responsavel "Ciclana Maria Rocha Pinto"
 
   # um perfil do arquivo, com outro responsavel so nesta rodada
-  python main.py --planilha "..." --tarefa defesa-faturada --responsavel "Nathalia"
+  python main.py --planilha "..." --tarefa defesa-faturada --responsavel "Ciclana"
 
   # a tarefa inteira vem das colunas "... DA TAREFA" de cada linha
   python main.py --planilha "Tarefas.xlsx" --tarefa planilha --executar
@@ -1015,6 +1015,8 @@ def _modo_rodada(args: argparse.Namespace) -> int:
     if args.dia:
         logger.warning("--dia so vale com --relatorio; ignorando.")
 
+    if config.ERRO_LOCAL:
+        raise ErroDeUso(f"Configuracao local com problema: {config.ERRO_LOCAL}")
     if config.ERRO_PERFIS:
         raise ErroDeUso(f"Perfis com problema: {config.ERRO_PERFIS}")
 

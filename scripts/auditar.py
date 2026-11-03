@@ -46,6 +46,9 @@ def argumentos(argv=None):
 
 def main(argv=None) -> int:
     args = argumentos(argv)
+    if config.ERRO_LOCAL:
+        print(f"Configuracao local com problema: {config.ERRO_LOCAL}", file=sys.stderr)
+        return 2
     saida = Path(args.saida or config.DATA_DIR /
                  f"auditoria_{args.desde.replace(':', '')}.csv")
 

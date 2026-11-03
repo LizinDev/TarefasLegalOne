@@ -57,7 +57,7 @@ Use só se o usuário quiser, avulso e local:
 
 ```bash
 npx -y rea-agents@6.7.0 list-browser-targets http://127.0.0.1:9222 \
-  --allowed-origins https://hasson.novajus.com.br --json > /tmp/<tarefa>/alvos.json
+  --allowed-origins <endereco do local.toml> --json > /tmp/<tarefa>/alvos.json
 npx -y rea-agents@6.7.0 inspect-web-page http://127.0.0.1:9222 <TARGET_ID> \
   --observation-ms 1000 --json > /tmp/<tarefa>/pagina.json
 npx -y rea-agents@6.7.0 observe-web-session http://127.0.0.1:9222 <TARGET_ID> \

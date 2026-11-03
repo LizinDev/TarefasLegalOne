@@ -357,8 +357,8 @@ B = "0000002-22.2025.8.05.0001"
 def test_colunas_da_tarefa_sao_lidas_por_linha(tmp_path):
     arq = _planilha(tmp_path, {"Tarefas": [
         CABECALHO_TAREFA,
-        (A, "CONFERIR CUSTAS", "Diversos", "Pendente", "Pedro Henrique Braz Moreira"),
-        (B, "CONFERIR CUSTAS", None, None, "Nathalia Maria Gatto Pinto"),
+        (A, "CONFERIR CUSTAS", "Diversos", "Pendente", "Beltrano Augusto Lima"),
+        (B, "CONFERIR CUSTAS", None, None, "Ciclana Maria Rocha Pinto"),
     ]})
 
     processos = planilha.ler(arq, colunas_da_tarefa=True)
@@ -368,10 +368,10 @@ def test_colunas_da_tarefa_sao_lidas_por_linha(tmp_path):
     sem_datas = {"inicio": "", "fim": "", "publicacao": "", "disponibilizacao": ""}
     assert processos[0].campos_tarefa == {
         "tipo": "Diversos", "status": "Pendente",
-        "responsavel": "Pedro Henrique Braz Moreira", **sem_datas}
+        "responsavel": "Beltrano Augusto Lima", **sem_datas}
     # Celula vazia fica vazia: quem completa e a preparacao da rodada.
     assert processos[1].campos_tarefa == {
-        "tipo": "", "status": "", "responsavel": "Nathalia Maria Gatto Pinto",
+        "tipo": "", "status": "", "responsavel": "Ciclana Maria Rocha Pinto",
         **sem_datas}
     # Quem le a planilha nao decide o perfil.
     assert processos[0].perfil is None
@@ -380,8 +380,8 @@ def test_colunas_da_tarefa_sao_lidas_por_linha(tmp_path):
 def test_linha_sem_descricao_e_pulada_com_aviso(tmp_path, caplog):
     arq = _planilha(tmp_path, {"Tarefas": [
         CABECALHO_TAREFA,
-        (A, "CONFERIR CUSTAS", None, "Pendente", "Pedro Henrique Braz Moreira"),
-        (B, None, None, "Pendente", "Pedro Henrique Braz Moreira"),
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima"),
+        (B, None, None, "Pendente", "Beltrano Augusto Lima"),
     ]})
 
     processos = planilha.ler(arq, colunas_da_tarefa=True)
@@ -393,7 +393,7 @@ def test_linha_sem_descricao_e_pulada_com_aviso(tmp_path, caplog):
 def test_mesmo_processo_com_duas_tarefas_vira_dois(tmp_path):
     arq = _planilha(tmp_path, {"Tarefas": [
         CABECALHO_TAREFA,
-        (A, "CONFERIR CUSTAS", None, "Pendente", "Pedro Henrique Braz Moreira"),
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima"),
         (A, "FATURAMENTO FINAL", None, None, None),
     ]})
 
@@ -403,7 +403,7 @@ def test_mesmo_processo_com_duas_tarefas_vira_dois(tmp_path):
 
 
 def test_mesma_tarefa_repetida_igual_continua_uma_so(tmp_path):
-    linha = (A, "CONFERIR CUSTAS", None, "Pendente", "Pedro Henrique Braz Moreira")
+    linha = (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima")
     arq = _planilha(tmp_path, {"Tarefas": [CABECALHO_TAREFA, linha, linha]})
 
     processos = planilha.ler(arq, colunas_da_tarefa=True)
@@ -417,8 +417,8 @@ def test_mesma_tarefa_com_valores_diferentes_e_erro(tmp_path):
     # dois responsaveis seria chute.
     arq = _planilha(tmp_path, {"Tarefas": [
         CABECALHO_TAREFA,
-        (A, "CONFERIR CUSTAS", None, "Pendente", "Pedro Henrique Braz Moreira"),
-        (A, "CONFERIR CUSTAS", None, "Pendente", "Nathalia Maria Gatto Pinto"),
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima"),
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Ciclana Maria Rocha Pinto"),
     ]})
 
     with pytest.raises(ValueError, match="valores diferentes") as erro:
@@ -430,7 +430,7 @@ def test_planilha_sem_a_coluna_de_descricao_e_erro(tmp_path):
     # Uma coluna RESPONSAVEL sozinha (o advogado do caso) nao liga o modo.
     arq = _planilha(tmp_path, {"2026": [
         ("PROCESSO", "RESPONSÁVEL"),
-        (A, "Pedro Henrique Braz Moreira"),
+        (A, "Beltrano Augusto Lima"),
     ]})
 
     with pytest.raises(ValueError, match="DESCRIÇÃO DA TAREFA"):
@@ -440,7 +440,7 @@ def test_planilha_sem_a_coluna_de_descricao_e_erro(tmp_path):
 def test_colunas_da_tarefa_sao_ignoradas_fora_do_modo(tmp_path):
     arq = _planilha(tmp_path, {"Tarefas": [
         CABECALHO_TAREFA,
-        (A, "CONFERIR CUSTAS", None, "Pendente", "Pedro Henrique Braz Moreira"),
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima"),
     ]})
 
     processos = planilha.ler(arq)
@@ -455,11 +455,11 @@ def test_colunas_de_data_aceitam_celula_de_data_e_texto(tmp_path):
         (*CABECALHO_TAREFA, "INÍCIO DA TAREFA", "CONCLUSÃO DA TAREFA",
          "PUBLICAÇÃO DA TAREFA", "DISPONIBILIZAÇÃO DA TAREFA"),
         # Celulas de data/hora do Excel.
-        (A, "CONFERIR CUSTAS", None, "Pendente", "Pedro Henrique Braz Moreira",
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima",
          datetime.datetime(2026, 10, 1, 9, 0), datetime.datetime(2026, 10, 1),
          datetime.date(2026, 9, 25), None),
         # Texto digitado passa como esta; quem interpreta e o datas.py.
-        (B, "CONFERIR CUSTAS", None, "Pendente", "Pedro Henrique Braz Moreira",
+        (B, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima",
          "01/10/2026  14:00", None, None, "24/09/2026"),
     ]})
 

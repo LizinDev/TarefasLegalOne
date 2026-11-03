@@ -23,6 +23,10 @@ logs/
 # tudo com numero de processo.
 /Faturamento 20*/
 
+# Valores desta instalacao: endereco do Legal One e nomes de pessoas (ver
+# local.exemplo.toml)
+/local.toml
+
 # Ferramentas
 .pytest_cache/
 .ruff_cache/

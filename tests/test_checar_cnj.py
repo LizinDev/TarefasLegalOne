@@ -101,3 +101,46 @@ def test_nao_ler_nada_e_falha_e_nao_limpo(tmp_path):
 
 def test_arvore_versionada_sem_cnj_real():
     assert checar_cnj.main([]) == 0
+
+
+# --- valores do local.toml ----------------------------------------------------
+
+def test_valores_locais_pega_host_e_nomes_e_ignora_ficticio_e_curto(tmp_path):
+    local = tmp_path / "local.toml"
+    exemplo = tmp_path / "local.exemplo.toml"
+    local.write_text(
+        '[legalone]\nendereco = "https://firma-real.novajus.com.br/"\n'
+        '[perfil]\nresponsavel = "Pessoa  Verdadeira"\n'
+        '[outro]\nresponsavel = "Ana"\n'
+        '[mais]\nresponsavel = "Fulana Regina de Araujo"\n', encoding="utf-8")
+    exemplo.write_text('[x]\nresponsavel = "Fulana Regina de Araujo"\n',
+                       encoding="utf-8")
+
+    proibidos = checar_cnj.valores_locais(local, exemplo)
+
+    assert proibidos == {"firma-real.novajus.com.br": "legalone.endereco",
+                         "pessoa verdadeira": "perfil.responsavel"}
+
+
+def test_valores_locais_sem_arquivo_nao_proibe_nada(tmp_path):
+    assert checar_cnj.valores_locais(tmp_path / "nao.toml", tmp_path / "x") == {}
+
+
+def test_achar_locais_ignora_caixa():
+    proibidos = {"pessoa verdadeira": "perfil.responsavel"}
+    texto = "linha 1\nresponsavel = 'PESSOA VERDADEIRA'\n"
+    assert checar_cnj.achar_locais(texto, proibidos) == [(2, "perfil.responsavel")]
+
+
+def test_arquivo_com_valor_local_reprova_sem_repetir_o_valor(tmp_path, monkeypatch,
+                                                             capsys):
+    monkeypatch.setattr(checar_cnj, "valores_locais",
+                        lambda: {"firma-real.novajus.com.br": "legalone.endereco"})
+    arquivo = tmp_path / "README.md"
+    arquivo.write_text("abra https://firma-real.novajus.com.br/login\n",
+                       encoding="utf-8")
+
+    assert checar_cnj.main([str(arquivo)]) == 1
+    saida = capsys.readouterr().out
+    assert "valor do local.toml (legalone.endereco)" in saida
+    assert "firma-real" not in saida

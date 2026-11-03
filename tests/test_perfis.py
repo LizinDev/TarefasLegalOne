@@ -13,7 +13,7 @@ PERFIL_OK = """
 descricao = "CONFERIR CUSTAS"
 tipo = "Diversos / Contato Telefônico"
 status = "Pendente"
-responsavel = "Pedro Henrique Braz Moreira"
+responsavel = "Beltrano Augusto Lima"
 """
 
 
@@ -26,14 +26,14 @@ def _arquivo(tmp_path, texto):
 def test_o_arquivo_do_repositorio_mantem_os_perfis_de_producao():
     # O que faturamento e defesa cadastravam quando eram codigo. Mudar isto e
     # mudar o que as rodadas de producao gravam no Legal One.
-    perfis = carregar_perfis(config.ARQUIVO_PERFIS)
+    perfis = carregar_perfis(config.ARQUIVO_PERFIS, config.LOCAL)
 
     assert {n: (p.descricao, p.tipo, p.status, p.responsavel, p.dica_arquivo)
             for n, p in perfis.items()} == {
         "faturamento-final": ("FATURAMENTO FINAL", "Diversos", "Cumprido",
-                              "Heloiza Helena de Araujo", "Faturamento"),
+                              "Fulana Regina de Araujo", "Faturamento"),
         "defesa-faturada": ("DEFESA FATURADA", "Diversos", "Cumprido",
-                            "Heloiza Helena de Araujo", "Defesa"),
+                            "Fulana Regina de Araujo", "Defesa"),
     }
     assert config.PERFIL_PADRAO == "faturamento-final"
     assert not config.ERRO_PERFIS
@@ -45,7 +45,7 @@ def test_perfil_valido(tmp_path):
     assert (perfil.nome, perfil.descricao, perfil.tipo, perfil.status,
             perfil.responsavel, perfil.dica_arquivo) == (
         "conferir-custas", "CONFERIR CUSTAS", "Diversos / Contato Telefônico",
-        "Pendente", "Pedro Henrique Braz Moreira", "")
+        "Pendente", "Beltrano Augusto Lima", "")
 
 
 @pytest.mark.parametrize("escrito, esperado", [
@@ -114,3 +114,56 @@ def test_todos_os_problemas_saem_juntos(tmp_path):
     with pytest.raises(ErroPerfis) as erro:
         carregar_perfis(_arquivo(tmp_path, texto))
     assert "[conferir-custas]" in str(erro.value) and "[vazio]" in str(erro.value)
+
+
+# --- local.toml: responsavel e endereco fora do repositorio ------------------
+
+SEM_RESPONSAVEL = """
+[conferir-custas]
+descricao = "CONFERIR CUSTAS"
+tipo = "Diversos"
+status = "Pendente"
+"""
+
+
+def test_local_completa_o_perfil_com_o_responsavel(tmp_path):
+    local = {"legalone": {"endereco": "https://x.novajus.com.br"},
+             "conferir-custas": {"responsavel": "  Ciclana   Maria "}}
+
+    perfil = carregar_perfis(_arquivo(tmp_path, SEM_RESPONSAVEL), local)
+
+    assert perfil["conferir-custas"].responsavel == "Ciclana Maria"
+    assert set(perfil) == {"conferir-custas"}   # [legalone] nao vira perfil
+
+
+def test_perfil_sem_responsavel_em_lugar_nenhum_aponta_o_local(tmp_path):
+    with pytest.raises(ErroPerfis, match=r"falta responsavel \(o responsavel fica "
+                                         r"no local\.toml\)"):
+        carregar_perfis(_arquivo(tmp_path, SEM_RESPONSAVEL), {})
+
+
+def test_o_tarefas_toml_do_repositorio_nao_traz_responsavel():
+    # Nome de pessoa nao vai para arquivo versionado: sem o local.toml, os
+    # perfis de producao nao fecham.
+    with pytest.raises(ErroPerfis, match="falta responsavel"):
+        carregar_perfis(config.ARQUIVO_PERFIS, {})
+
+
+def test_secao_legalone_no_tarefas_toml_e_reservada(tmp_path):
+    texto = SEM_RESPONSAVEL.replace("[conferir-custas]", "[legalone]") + \
+        'responsavel = "X"\n'
+    with pytest.raises(ErroPerfis, match="nome reservado"):
+        carregar_perfis(_arquivo(tmp_path, texto))
+
+
+def test_local_ausente_diz_como_criar(tmp_path):
+    conteudo, problema = config.carregar_local(tmp_path / "local.toml")
+
+    assert conteudo == {}
+    assert "local.exemplo.toml" in problema
+
+
+def test_os_testes_rodam_com_o_exemplo_ficticio():
+    assert config.ARQUIVO_LOCAL.name == "local.exemplo.toml"
+    assert not config.ERRO_LOCAL
+    assert config.BASE_URL == "https://escritorio.novajus.com.br"

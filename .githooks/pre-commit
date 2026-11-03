@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
-# Barra numero CNJ real antes de ele entrar no historico (a CI so ve depois do
-# push, e ai o numero ja esta nos commits). Ativar uma vez por clone:
+# Barra numero CNJ real e valor do local.toml antes de entrarem no historico.
+# A CI so ve depois do push, quando ja estao nos commits, e nem tem o
+# local.toml. Ativar uma vez por clone:
 #
 #   git config core.hooksPath .githooks
 #

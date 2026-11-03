@@ -75,25 +75,25 @@ def test_lista_longa_de_sugestoes_e_cortada():
 # --- responsavel -------------------------------------------------------------
 
 @pytest.mark.parametrize("pedido", [
-    "Heloiza Helena de Araujo",
-    "heloiza helena de araújo",   # acento a mais: a busca do Legal One ignora
-    "Heloiza",                    # unico que casa
+    "Fulana Regina de Araujo",
+    "fulana regina de araújo",   # acento a mais: a busca do Legal One ignora
+    "Fulana",                    # unico que casa
 ])
 def test_responsavel_resolve_para_o_nome_do_legal_one(pedido):
     nomes = [n for n in USUARIOS
              if catalogo.normalizar(pedido.split()[0]) in catalogo.normalizar(n)]
-    assert resolver_usuario(pedido, nomes) == "Heloiza Helena de Araujo"
+    assert resolver_usuario(pedido, nomes) == "Fulana Regina de Araujo"
 
 
 def test_nome_igual_ganha_mesmo_com_outros_resultados():
-    nomes = ["Ana Clara", "Ana Clara Stroparo"]
+    nomes = ["Ana Clara", "Ana Clara Exemplo"]
     assert resolver_usuario("ana clara", nomes) == "Ana Clara"
 
 
 def test_responsavel_ambiguo_para_com_a_lista():
     with pytest.raises(NaoResolvido, match="mais de um usuario") as erro:
-        resolver_usuario("Ana", ["Ana Clara Stroparo", "Ana Luiza Saitone Costa"])
-    assert "Ana Luiza Saitone Costa" in str(erro.value)
+        resolver_usuario("Ana", ["Ana Clara Exemplo", "Ana Luiza Modelo Costa"])
+    assert "Ana Luiza Modelo Costa" in str(erro.value)
 
 
 def test_responsavel_que_nao_e_usuario_ativo():
@@ -102,5 +102,5 @@ def test_responsavel_que_nao_e_usuario_ativo():
 
 
 def test_resultado_repetido_nao_vira_ambiguidade():
-    assert resolver_usuario("Heloiza", ["Heloiza Helena de Araujo"] * 2) == \
-        "Heloiza Helena de Araujo"
+    assert resolver_usuario("Fulana", ["Fulana Regina de Araujo"] * 2) == \
+        "Fulana Regina de Araujo"
