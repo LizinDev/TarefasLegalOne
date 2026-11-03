@@ -311,19 +311,19 @@ def test_limite_corta_a_fila(registro, perfil):
 
 
 def test_processo_avulso_ignora_o_ledger_e_normaliza(registro, perfil, caplog):
-    registro.registrar("0064904-50.2019.8.05.0001", perfil.descricao, ledger_mod.OK)
+    registro.registrar("0012345-00.2019.8.05.0001", perfil.descricao, ledger_mod.OK)
     args = main.argumentos([
         "--planilha", "x.xlsx", "--executar",
         # Como o usuario digita: com ponto no lugar do primeiro hifen.
-        "--processo", "0064904.50.2019.8.05.0001", "0000000-00.0000.0.00.0000",
+        "--processo", "0012345.00.2019.8.05.0001", "0000000-00.0000.0.00.0000",
     ])
 
     processos, fila, _ = main._montar_fila(
         args, registro, perfil,
-        _processos("0064904-50.2019.8.05.0001", "0000001-11.2025.8.05.0001"),
+        _processos("0012345-00.2019.8.05.0001", "0000001-11.2025.8.05.0001"),
     )
 
-    assert [p.cnj for p in fila] == ["0064904-50.2019.8.05.0001"]
+    assert [p.cnj for p in fila] == ["0012345-00.2019.8.05.0001"]
     assert len(processos) == 1
     assert "0000000-00.0000.0.00.0000" in caplog.text  # avisa o que nao achou
 
@@ -481,8 +481,8 @@ def test_chrome_fora_do_ar_devolve_codigo_de_rodada_abortada(
 
 ACHADO = "0000001-11.2025.8.05.0001"
 INEXISTENTE = "0000002-22.2025.8.05.0001"
-COM_PONTO = "0064904.50.2019.8.05.0001"          # o erro de digitacao da planilha
-CORRIGIDO = "0064904-50.2019.8.05.0001"
+COM_PONTO = "0012345.00.2019.8.05.0001"          # o erro de digitacao da planilha
+CORRIGIDO = "0012345-00.2019.8.05.0001"
 
 
 def _linhas_csv(caminho) -> list[dict]:

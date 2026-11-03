@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Barra numero CNJ real antes de ele entrar no historico (a CI so ve depois do
+# push, e ai o numero ja esta nos commits). Ativar uma vez por clone:
+#
+#   git config core.hooksPath .githooks
+#
+# Pular num commit so quando o achado for falso: git commit --no-verify
+set -e
+raiz="$(git rev-parse --show-toplevel)"
+for py in "$raiz/.venv/bin/python" "$raiz/.venv/Scripts/python.exe" python3 python py; do
+    if command -v "$py" >/dev/null 2>&1; then
+        exec "$py" "$raiz/scripts/checar_cnj.py" --staged
+    fi
+done
+echo "pre-commit: Python nao encontrado, checagem de CNJ pulada" >&2

@@ -8,9 +8,9 @@ import planilha
 # --- normalizacao ------------------------------------------------------------
 
 @pytest.mark.parametrize("bruto, esperado", [
-    ("0000632-63.2025.8.05.0154", "0000632-63.2025.8.05.0154"),
-    ("  0000632-63.2025.8.05.0154  ", "0000632-63.2025.8.05.0154"),
-    ("0000632-63.2025.8.05.0154\n", "0000632-63.2025.8.05.0154"),
+    ("0000123-00.2025.8.05.0154", "0000123-00.2025.8.05.0154"),
+    ("  0000123-00.2025.8.05.0154  ", "0000123-00.2025.8.05.0154"),
+    ("0000123-00.2025.8.05.0154\n", "0000123-00.2025.8.05.0154"),
 ])
 def test_numero_no_padrao_passa_intacto(bruto, esperado):
     assert planilha.normalizar(bruto) == (esperado, True)
@@ -18,12 +18,12 @@ def test_numero_no_padrao_passa_intacto(bruto, esperado):
 
 def test_ponto_no_lugar_do_primeiro_hifen_e_corrigido():
     # Erro de digitacao comum na planilha, recuperavel sem ambiguidade.
-    assert planilha.normalizar("0064904.50.2019.8.05.0001") == (
-        "0064904-50.2019.8.05.0001", True
+    assert planilha.normalizar("0012345.00.2019.8.05.0001") == (
+        "0012345-00.2019.8.05.0001", True
     )
 
 
-@pytest.mark.parametrize("bruto", ["", "sem numero", "123", "0064904-50.2019.8.05"])
+@pytest.mark.parametrize("bruto", ["", "sem numero", "123", "0012345-00.2019.8.05"])
 def test_numero_quebrado_segue_marcado_como_fora_do_padrao(bruto):
     # Nao pode sumir em silencio: vai para a busca assim mesmo e sai no
     # relatorio marcado, para conferencia manual.

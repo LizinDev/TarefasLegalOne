@@ -6,7 +6,7 @@ significa tarefa duplicada ou tarefa no processo errado.
 import config
 import legalone
 
-CNJ = "0003850-54.2026.8.16.0188"
+CNJ = "0004321-00.2026.8.16.0188"
 
 
 def _linha(id_legalone, numero, tipo="Processo", status="Ativo"):

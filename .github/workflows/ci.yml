@@ -38,6 +38,11 @@ jobs:
       # historico de verdade atras de uma mudanca de estilo.
       - run: ruff check --output-format=github .
 
+      # Numero de processo real em arquivo versionado. Em 23/10/2026 o repo
+      # estava publico com 4 deles; ver scripts/checar_cnj.py.
+      - name: sem numero CNJ real
+        run: python scripts/checar_cnj.py
+
   testes:
     name: testes (${{ matrix.os }}, py${{ matrix.python }})
     runs-on: ${{ matrix.os }}

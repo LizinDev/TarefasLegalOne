@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # NNNNNNN-DD.AAAA.J.TR.OOOO
 RE_CNJ = re.compile(r"^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$")
 # Mesma coisa, mas com ponto no lugar do hifen — erro de digitacao comum na
-# planilha (ex.: 0064904.50.2019.8.05.0001). E recuperavel sem ambiguidade.
+# planilha (ex.: 0012345.00.2019.8.05.0001). E recuperavel sem ambiguidade.
 RE_CNJ_PONTO = re.compile(r"^(\d{7})\.(\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})$")
 
 

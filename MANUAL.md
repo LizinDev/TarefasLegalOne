@@ -213,7 +213,7 @@ O número precisa **estar na planilha**. Se não estiver, sai um aviso
 (`Nao esta(o) na planilha: ...`) e ele não é processado.
 
 ```powershell
-python main.py --planilha "..." --processo 0088829-65.2025.8.05.0001 --executar
+python main.py --planilha "..." --processo 0054321-00.2025.8.05.0001 --executar
 ```
 
 **`--limite N`**
@@ -626,7 +626,7 @@ Os nomes das colunas são reconhecidos sem ligar para maiúsculas nem espaços
 sobrando, mas o acento conta: `TIPO DE COBRANCA` sem cedilha não é reconhecida e
 a coluna passa a valer como vazia.
 
-Número no formato `0064904.50.2019.8.05.0001` (ponto no lugar do primeiro hífen)
+Número no formato `0012345.00.2019.8.05.0001` (ponto no lugar do primeiro hífen)
 é corrigido automaticamente; o relatório mostra as duas versões nas colunas
 `PROCESSO` e `PESQUISADO_COMO`. Números realmente quebrados são tentados como
 estão, falham na busca e saem marcados como fora do padrão CNJ — em vez de

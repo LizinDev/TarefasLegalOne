@@ -107,7 +107,7 @@ a referência completa das flags estão no
 ## Quando a tarefa já existe
 
 Parte dos processos **já tem a tarefa cadastrada antes de o programa rodar**,
-feita à mão. Confirmado em produção: o processo `0088829-65.2025.8.05.0001` já
+feita à mão. Confirmado em produção: um processo já
 tinha uma `DEFESA FATURADA` marcada como Cumprido, e numa conferência da aba
 `2019-2020-2021` isso valeu para 5 de 10 processos sorteados.
 
@@ -353,7 +353,7 @@ Números repetidos entre abas viram **um processo só** — a tarefa é cadastra
 uma vez, e a origem agregada aparece no relatório. Com `--tarefa auto` isso vale
 por tarefa: o mesmo número com as duas cobranças recebe as duas.
 
-Número no formato `0064904.50.2019.8.05.0001` (ponto no lugar do primeiro hífen)
+Número no formato `0012345.00.2019.8.05.0001` (ponto no lugar do primeiro hífen)
 é corrigido automaticamente. Números realmente quebrados são tentados como
 estão, falham na busca e saem no relatório marcados como fora do padrão CNJ —
 em vez de sumirem em silêncio.
@@ -402,7 +402,15 @@ caminho.
 pip install -r requirements-dev.txt
 pytest          # a suíte inteira roda em segundos, sem navegador
 ruff check .    # lint
+python scripts/checar_cnj.py       # número CNJ real em arquivo versionado
+git config core.hooksPath .githooks # uma vez por clone: a mesma checagem no commit
 ```
+
+Exemplo em teste e documentação usa número **inventado**, com o dígito verificador
+errado de propósito (`0012345-00.2019.8.05.0001`). Número com dígito certo é
+quase sempre copiado de um processo real, e a checagem barra: foi assim que quatro
+deles ficaram expostos enquanto o repositório era público. Sintético de dígito
+válido, se um dia for preciso, entra em `scripts/cnj_permitidos.txt`.
 
 Nenhum teste toca no Legal One, no Chrome ou no ledger de produção: o Selenium
 é substituído por um automador falso e todo arquivo vai para um diretório
@@ -424,7 +432,7 @@ esconderia o histórico atrás de uma mudança de estilo.
 
 | Workflow | Quando | O que faz |
 | --- | --- | --- |
-| `ci.yml` | push e pull request | lint com ruff; `pytest` em Python 3.10/3.12/3.14 no Linux e 3.14 no Windows; fumaça da CLI (`--help`, `--relatorio`, código de saída) |
+| `ci.yml` | push e pull request | lint com ruff e checagem de número CNJ real; `pytest` em Python 3.10/3.12/3.14 no Linux e 3.14 no Windows; fumaça da CLI (`--help`, `--relatorio`, código de saída) |
 | `seguranca.yml` | semanal e quando mexe nos requirements | `pip-audit` nas dependências |
 | `codeql.yml` | semanal | análise estática de segurança |
 | `dependabot.yml` | semanal/mensal | PR quando sai versão nova de dependência ou de action |
@@ -471,7 +479,7 @@ Ele já vem sem gatilho de push justamente para não atrapalhar o dia a dia.
   [Como os erros são tratados](#como-os-erros-são-tratados)).
 - **Só cadastra em pasta do tipo `Processo`.** Recurso e incidente repetem o
   número CNJ do processo principal; cadastrar neles duplicaria a tarefa.
-  Verificado em produção: o CNJ `0003850-54.2026.8.16.0188` tem 3 pastas
+  Verificado em produção: um CNJ do TJPR tem 3 pastas
   (1 Processo + 2 Recursos) e a tarefa vai só para a principal. Quando o número
   existe **apenas** como recurso ou incidente, o programa não adivinha — marca
   como `nao_encontrado` com o motivo `nenhuma pasta do tipo Processo (achei:
