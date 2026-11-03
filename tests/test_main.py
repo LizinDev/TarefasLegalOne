@@ -925,3 +925,18 @@ def test_rodada_com_datas_da_linha_e_da_cli(dados_tmp, monkeypatch, tmp_path):
                  for linha in _linhas_csv(dados_tmp / "relatorio.csv")}
     assert relatorio[ACHADO]["DATA_INICIO"] == f"{dia} 16:00:00"
     assert relatorio[CORRIGIDO]["DATA_PUBLICACAO"] == "25/09/2026"
+
+
+def test_chrome_ocupado_nao_comeca_e_diz_quem_usa(
+    dados_tmp, monkeypatch, tmp_path, caplog
+):
+    monkeypatch.setattr(planilha, "ler", lambda *a, **kw: [processo("A")])
+    def ocupado():
+        raise main.trava.ChromeOcupado("em uso (auditar.py, PID 42)")
+    monkeypatch.setattr(main.legalone, "conectar", ocupado)
+
+    assert main.main(
+        ["--planilha", str(tmp_path / "Faturamento.xlsx")]
+    ) == main.SAIDA_ABORTADA
+    assert "auditar.py, PID 42" in caplog.text
+    assert "remote-debugging-port" not in caplog.text  # nao manda abrir o Chrome

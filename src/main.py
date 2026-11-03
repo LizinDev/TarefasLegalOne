@@ -29,6 +29,7 @@ import ledger as ledger_mod
 import legalone
 import planilha
 import relatorio
+import trava
 
 logger = logging.getLogger(__name__)
 
@@ -1047,6 +1048,9 @@ def _modo_rodada(args: argparse.Namespace) -> int:
 
         try:
             driver = legalone.conectar()
+        except trava.ChromeOcupado as e:
+            logger.error("Nao comecei: %s", e)
+            return SAIDA_ABORTADA
         except Exception as e:
             logger.error("Nao consegui conectar ao Chrome em %s: %s",
                          config.DEBUG_ADDRESS, e)

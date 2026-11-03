@@ -56,7 +56,12 @@ def main(argv=None) -> int:
     if not alvos:
         return 0
 
-    automador = legalone.AutomadorLegalOne(legalone.conectar())
+    try:
+        driver = legalone.conectar()
+    except legalone.trava.ChromeOcupado as e:
+        print(f"Nao comecei: {e}", file=sys.stderr)
+        return 1
+    automador = legalone.AutomadorLegalOne(driver)
     automador.usar_aba_propria()
 
     ausentes = falhas = 0

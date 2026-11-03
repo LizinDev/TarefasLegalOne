@@ -369,6 +369,7 @@ src/
 ├── planilha.py   # leitura do .xlsx -> lista de processos únicos
 ├── legalone.py   # Selenium: busca o processo e cadastra a tarefa
 ├── seletores.py  # seletores e blocos JS do Legal One, num lugar só
+├── trava.py      # um programa por vez no Chrome de debug
 ├── ledger.py     # checkpoint em SQLite + exportação dos CSVs
 └── relatorio.py  # planilha Excel do dia (a que vai para o supervisor)
 
@@ -445,9 +446,9 @@ A rodada completa não tem como ser testada na CI — ela depende de um Chrome
 logado no Legal One. Por isso a checagem de verdade continua sendo o
 `--so-buscar` e a simulação antes de uma rodada real.
 
-Como o repositório é **privado**, o `codeql.yml` exige GitHub Advanced
-Security e pode falhar no upload dos alertas; nesse caso é só apagar o arquivo.
-Ele já vem sem gatilho de push justamente para não atrapalhar o dia a dia.
+Como o repositório é **privado**, e code scanning em repo privado exige
+GitHub Advanced Security, o job do `codeql.yml` só roda quando o repo é público.
+Enquanto for privado ele aparece como pulado, não como falha.
 
 ## Notas técnicas
 

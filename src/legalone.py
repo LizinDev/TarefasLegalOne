@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 import os
+import sys
 import time
 import urllib.parse
 
@@ -23,6 +24,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 import catalogo
 import config
 import seletores
+import trava
 
 logger = logging.getLogger(__name__)
 
@@ -166,8 +168,20 @@ def situacao_pos_salvar(url: str, aviso: str, erros: str) -> str | None:
     return SALVOU
 
 
+_trava_do_chrome: trava.Trava | None = None
+
+
 def conectar() -> webdriver.Chrome:
-    """Conecta ao Chrome ja aberto em modo debug (nunca abre outra instancia)."""
+    """Conecta ao Chrome ja aberto em modo debug (nunca abre outra instancia).
+
+    Antes de conectar, pega a trava do Chrome de debug (ver trava.py) e a segura
+    ate o processo terminar. Levanta trava.ChromeOcupado se outro programa ja
+    estiver usando o navegador.
+    """
+    global _trava_do_chrome
+    if _trava_do_chrome is None:
+        programa = os.path.basename(sys.argv[0]) or "python"
+        _trava_do_chrome = trava.Trava(config.DEBUG_PORT, programa).adquirir()
     # Em maquinas com chromedriver antigo instalado via chocolatey, o binario do
     # PATH ganha do Selenium Manager e quebra com Chrome novo. Tirando esses
     # diretorios do PATH, o Selenium Manager baixa a versao compativel.

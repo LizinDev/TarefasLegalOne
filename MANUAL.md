@@ -771,6 +771,15 @@ A janela com `--remote-debugging-port=9222` está aberta? Ela precisa continuar
 aberta durante toda a rodada. Se estiver aberta e mesmo assim falhar, confirme a
 porta com `DEBUG_PORT`.
 
+### "Nao comecei: o Chrome de debug na porta 9222 ja esta em uso" (código 1)
+
+Outro programa já está trabalhando naquele Chrome: uma rodada, o
+`scripts/auditar.py` ou outra automação que use a mesma porta. A mensagem diz
+qual programa é, o PID e desde quando. Dois ao mesmo tempo trocam de página um
+embaixo do outro, por isso o segundo nem começa. Espere o primeiro terminar, ou
+encerre-o, e rode de novo. Não há arquivo de trava para apagar: ela se solta
+sozinha quando o outro programa termina, mesmo que tenha sido fechado à força.
+
 ### "SESSAO EXPIRADA" (código 3)
 
 O Legal One redirecionou para a tela de login. A rodada para na hora, de
