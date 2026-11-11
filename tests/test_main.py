@@ -951,3 +951,87 @@ def test_sem_local_toml_e_erro_de_uso_antes_do_chrome(dados_tmp, monkeypatch, ca
 
     assert main.main(["--planilha", "x.xlsx"]) == main.SAIDA_USO
     assert "local.exemplo.toml" in caplog.text
+
+
+# --- modo planilha: o mesmo ato em outro dia e outra tarefa ------------------
+
+def _dia(dias: int) -> str:
+    return (datetime.date.today() + datetime.timedelta(days=dias)).strftime("%d/%m/%Y")
+
+
+def _agendamentos(tmp_path, nome, linhas):
+    """Planilha no formato que a skill de agendamento entrega ao robo."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Agendamentos"
+    ws.append(["PROCESSO", "DESCRIÇÃO DA TAREFA", "TIPO DA TAREFA",
+               "STATUS DA TAREFA", "RESPONSÁVEL DA TAREFA", "INÍCIO DA TAREFA",
+               "CONCLUSÃO DA TAREFA"])
+    for cnj, descricao, dia in linhas:
+        quando = f"{dia} 23:59"
+        ws.append([cnj, descricao, "Diversos", "Pendente",
+                   "Beltrano Augusto Lima", quando, quando])
+    caminho = tmp_path / nome
+    wb.save(caminho)
+    return caminho
+
+
+ALVARA = "Verificar Alvará - TJMT"
+
+
+def test_mesmo_ato_em_outro_dia_e_cadastrado_e_a_retomada_nao_duplica(
+    dados_tmp, monkeypatch, tmp_path
+):
+    automador = AutomadorFalso({ACHADO: achou("111")})
+    monkeypatch.setattr(main.legalone, "conectar", lambda: object())
+    monkeypatch.setattr(main.legalone, "AutomadorLegalOne", lambda *a: automador)
+
+    # Dia 1: um alvara. Dia 2: outro alvara no mesmo processo, outra data.
+    dia1 = _agendamentos(tmp_path, "dia1.xlsx", [(ACHADO, ALVARA, _dia(1))])
+    dia2 = _agendamentos(tmp_path, "dia2.xlsx", [(ACHADO, ALVARA, _dia(1)),
+                                                 (ACHADO, ALVARA, _dia(8))])
+    for arq in (dia1, dia2, dia2):  # a ultima e a retomada da mesma planilha
+        assert main.main(["--planilha", str(arq), "--tarefa", "planilha",
+                          "--executar"]) == main.SAIDA_OK
+
+    # Duas tarefas, uma por dia — nem a repetida na planilha do dia 2 nem a
+    # retomada cadastraram de novo.
+    assert [t.inicio for t in automador.enviadas] == [
+        f"{_dia(1)} 23:59:00", f"{_dia(8)} 23:59:00"]
+    assert automador.tarefas == [ALVARA, ALVARA]
+
+    # Os relatorios mostram a descricao que foi ao Legal One, sem a chave.
+    linhas = _linhas_csv(dados_tmp / "relatorio.csv")
+    assert [(lin["TAREFA"], lin["DATA_INICIO"]) for lin in linhas] == [
+        (ALVARA, f"{_dia(1)} 23:59:00"), (ALVARA, f"{_dia(8)} 23:59:00")]
+    hoje = datetime.date.today().isoformat()
+    ws = load_workbook(dados_tmp / f"cadastrados_{hoje}.xlsx").active
+    assert [ws.cell(row=i, column=3).value for i in (2, 3)] == [ALVARA, ALVARA]
+
+
+def test_fila_respeita_o_ledger_gravado_antes_da_data_entrar_na_chave(registro):
+    # Rodada feita antes da mudanca: chave so pela descricao.
+    registro.registrar(ACHADO, ALVARA, ledger_mod.OK,
+                       data_inicio=f"{_dia(1)} 23:59:00")
+    args = main.argumentos(["--planilha", "x.xlsx", "--tarefa", "planilha",
+                            "--executar"])
+    mesmo_dia = dataclasses.replace(processo(ACHADO, tarefa=ALVARA),
+                                    data_chave=_dia(1))
+    outro_dia = dataclasses.replace(processo(ACHADO, tarefa=ALVARA),
+                                    data_chave=_dia(8))
+
+    _, fila, _ = main._montar_fila(args, registro, config.PERFIL_PLANILHA,
+                                   [mesmo_dia, outro_dia])
+
+    assert [p.data_chave for p in fila] == [_dia(8)]
+
+
+def test_perfis_continuam_com_a_chave_so_pela_descricao(registro, perfil):
+    # Faturamento e defesa nao mudam: a data da rodada nao faz a tarefa nova.
+    args = main.argumentos(["--planilha", "x.xlsx", "--executar", "--data", _dia(3)])
+    registro.registrar("A", perfil.descricao, ledger_mod.OK)
+
+    _, fila, _ = main._montar_fila(args, registro, perfil, _processos("A"))
+
+    assert fila == []
+    assert main.chave_do_ledger(processo("A"), perfil) == perfil.descricao

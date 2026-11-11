@@ -44,6 +44,11 @@ class Processo:
     perfil: "config.PerfilTarefa | None" = None
     # As datas pedidas na propria linha (modo planilha); por cima das da rodada.
     agenda: "datas.Agenda | None" = None
+    # Dia de INICIO DA TAREFA da linha (DD/MM/AAAA), so no modo planilha. Entra
+    # na chave do ledger e na deduplicacao: o mesmo ato no mesmo processo em
+    # outro dia e outra tarefa (ver ledger.chave_tarefa). "" fora desse modo ou
+    # com a celula vazia.
+    data_chave: str = ""
 
     @property
     def origem(self) -> str:
@@ -116,10 +121,11 @@ def ler(
     colunas_da_tarefa — a tarefa vem das colunas "... DA TAREFA" (modo
                        --tarefa planilha). A descricao e obrigatoria por linha:
                        linha sem ela e pulada, com aviso. A deduplicacao e por
-                       (processo, descricao), e o mesmo par com tipo, status ou
-                       responsavel diferentes em duas linhas e erro — o ledger
-                       guarda um cadastro por par, e escolher um dos dois seria
-                       chute.
+                       (processo, descricao, dia de inicio): o mesmo ato em dias
+                       diferentes sao duas tarefas. O mesmo trio com tipo,
+                       status, responsavel ou hora diferentes em duas linhas e
+                       erro — o ledger guarda um cadastro por trio, e escolher
+                       um dos dois seria chute.
     """
     caminho = Path(caminho)
     if not caminho.is_file():
@@ -135,9 +141,10 @@ def ler(
                 f"Disponiveis: {wb.sheetnames}"
             )
 
-        # A chave e o par (numero, tarefa). Sem tarefa_da_linha a tarefa e "" em
-        # todas as linhas e o par se comporta como a chave so pelo numero.
-        por_chave: dict[tuple[str, str], Processo] = {}
+        # A chave e (numero, tarefa, dia de inicio). Sem tarefa_da_linha a
+        # tarefa e "" em todas as linhas e a chave se comporta como so o numero;
+        # o dia so existe no modo planilha.
+        por_chave: dict[tuple[str, str, str], Processo] = {}
         total_linhas = 0
         nao_reconhecidos: collections.Counter = collections.Counter()
         sem_descricao = 0
@@ -210,12 +217,14 @@ def ler(
 
                 total_linhas += 1
                 cnj, ok = normalizar(bruto)
+                dia = _dia_de_inicio(campos.get("inicio", ""))
 
-                proc = por_chave.get((cnj, tarefa))
+                proc = por_chave.get((cnj, tarefa, dia))
                 if proc is None:
                     proc = Processo(cnj=cnj, cnj_original=bruto, formato_ok=ok,
-                                    tarefa=tarefa, campos_tarefa=campos)
-                    por_chave[(cnj, tarefa)] = proc
+                                    tarefa=tarefa, campos_tarefa=campos,
+                                    data_chave=dia)
+                    por_chave[(cnj, tarefa, dia)] = proc
                 elif campos != proc.campos_tarefa:
                     conflitos.append(
                         f"{bruto} / {tarefa!r}: {proc.linhas[0]} "
@@ -260,6 +269,21 @@ def ler(
                       for valor, n in nao_reconhecidos.most_common()),
         )
     return processos
+
+
+def _dia_de_inicio(texto: str) -> str:
+    """O dia (DD/MM/AAAA) de uma celula de INICIO DA TAREFA; "" se vazia.
+
+    Celula que nao e data passa como esta: ela ainda separa as linhas na
+    deduplicacao, e o erro com a mensagem certa sai da preparacao da rodada.
+    """
+    if not texto:
+        return ""
+    try:
+        dia, _ = datas.ler(texto)
+    except ValueError:
+        return texto
+    return dia or ""
 
 
 def _celula_data(linha, indices: dict[str, int], coluna: str) -> str:

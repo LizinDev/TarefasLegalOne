@@ -591,3 +591,64 @@ def test_sem_responsavel_historico_a_coluna_fica_em_branco(tmp_path, monkeypatch
         campos = _campos_da_tarefa(led, CNJ, DEFESA)
     assert campos["tipo"] == "Diversos"
     assert campos["responsavel"] is None
+
+
+# --- chave com data (modo --tarefa planilha) ---------------------------------
+
+def test_chave_sem_data_e_a_propria_descricao():
+    assert ledger_mod.chave_tarefa("FATURAMENTO FINAL") == "FATURAMENTO FINAL"
+    assert ledger_mod.chave_tarefa("FATURAMENTO FINAL", "") == "FATURAMENTO FINAL"
+
+
+def test_chave_com_data_volta_as_partes():
+    chave = ledger_mod.chave_tarefa("Verificar Alvará - TJMT", "11/11/2026")
+
+    assert chave == "Verificar Alvará - TJMT @ 11/11/2026"
+    assert ledger_mod.partes_da_chave(chave) == ("Verificar Alvará - TJMT",
+                                                 "11/11/2026")
+    assert ledger_mod.descricao_da_chave(chave) == "Verificar Alvará - TJMT"
+    # Descricao que nao termina em data fica inteira.
+    assert ledger_mod.partes_da_chave("PRZ - 16/11 - ED - TJAL") == (
+        "PRZ - 16/11 - ED - TJAL", "")
+
+
+def test_mesmo_ato_em_dias_diferentes_sao_registros_separados(registro):
+    d = "Verificar Alvará - TJMT"
+    registro.registrar("A", ledger_mod.chave_tarefa(d, "11/11/2026"), ledger_mod.OK)
+    registro.registrar("A", ledger_mod.chave_tarefa(d, "18/11/2026"), ledger_mod.OK)
+
+    assert registro.todos(ledger_mod.chave_tarefa(d, "11/11/2026")) == {"A"}
+    assert registro.todos(ledger_mod.chave_tarefa(d, "25/11/2026")) == set()
+    # O acumulado por descricao junta os dias.
+    assert registro.resumo(d)[ledger_mod.OK] == 2
+
+
+def test_chave_com_data_acha_o_registro_gravado_antes_da_data_entrar(registro):
+    # Ledger de antes da mudanca: chave so pela descricao, dia em data_inicio.
+    d = "Verificar Alvará - TJMT"
+    registro.registrar("A", d, ledger_mod.OK, data_inicio="11/11/2026 23:59:00")
+    registro.registrar("B", d, ledger_mod.ERRO, data_inicio="11/11/2026 23:59:00")
+
+    mesmo_dia = ledger_mod.chave_tarefa(d, "11/11/2026")
+    assert registro.todos(mesmo_dia) == {"A", "B"}
+    assert registro.concluidos(mesmo_dia) == {"A"}
+    # Outro dia e outra tarefa: o registro antigo nao a esconde.
+    assert registro.todos(ledger_mod.chave_tarefa(d, "18/11/2026")) == set()
+
+
+def test_relatorios_mostram_a_descricao_sem_a_data_da_chave(registro, tmp_path):
+    d = "Verificar Alvará - TJMT"
+    registro.registrar("A", ledger_mod.chave_tarefa(d, "11/11/2026"), ledger_mod.OK,
+                       data_inicio="11/11/2026 23:59:00")
+    registro.registrar("B", ledger_mod.chave_tarefa(d, "11/11/2026"),
+                       ledger_mod.NAO_ENCONTRADO)
+
+    linhas = registro.cadastrados_entre("2000-01-01", "2999-01-01")
+    assert [(cnj, tarefa) for cnj, tarefa, *_ in linhas] == [("A", d)]
+
+    for arquivo, exportar in (("r.csv", registro.exportar_csv),
+                              ("n.csv", registro.exportar_nao_encontrados)):
+        exportar(tmp_path / arquivo)
+        cabecalho, *linhas = _ler_csv(tmp_path / arquivo)
+        coluna = cabecalho.index("TAREFA")
+        assert {linha[coluna] for linha in linhas} == {d}

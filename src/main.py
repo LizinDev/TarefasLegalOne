@@ -413,6 +413,10 @@ class Rodada:
             proc.tarefa, self.perfil)
         return self.resolucao.aplicar(perfil)
 
+    def _chave(self, proc: planilha.Processo) -> str:
+        """A chave deste processo no ledger (ver chave_do_ledger)."""
+        return chave_do_ledger(proc, self.perfil)
+
     def _agenda_de(self, proc: planilha.Processo) -> datas.Agenda:
         """As datas pedidas para este processo: as da linha por cima das flags."""
         return proc.agenda.sobre(self.agenda) if proc.agenda else self.agenda
@@ -453,7 +457,7 @@ class Rodada:
             return True
 
         # Lido antes de qualquer _anotar, que sobrescreve o detalhe.
-        detalhe_anterior = self.registro.detalhe(proc.cnj, perfil.descricao)
+        detalhe_anterior = self.registro.detalhe(proc.cnj, self._chave(proc))
 
         # A checagem nao decide mais se cadastra — decide o que registrar. A
         # orientacao de operacao para a tarefa que ja existe e cadastrar de novo
@@ -542,6 +546,7 @@ class Rodada:
             detalhe = f"{detalhe} (numero fora do padrao CNJ)"
         situacao = ledger_mod.AMBIGUO if busca.ambiguo else ledger_mod.NAO_ENCONTRADO
         tarefa = self._perfil_de(proc).descricao
+        chave = self._chave(proc)
 
         self._anotar(proc, situacao, detalhe=detalhe)
         self.nao_encontrados.append({
@@ -550,6 +555,8 @@ class Rodada:
             # traz ponto no lugar do primeiro hifen.
             "cnj_busca": proc.cnj,
             "tarefa": tarefa,
+            # A chave do ledger: e por ela que o disjuntor descarta os suspeitos.
+            "chave": chave,
             "situacao": situacao,
             "motivo": detalhe,
             "tipo_cobranca": "; ".join(proc.tipos_cobranca),
@@ -557,7 +564,7 @@ class Rodada:
             "origem": proc.origem,
         })
         self.contagem["nao_encontrado"] += 1
-        self.trilha_sem_achar.append((proc.cnj, tarefa))
+        self.trilha_sem_achar.append((proc.cnj, chave))
         logger.warning("[%d/%d] %s — %s", i, total, proc.cnj, detalhe)
 
         if len(self.trilha_sem_achar) >= config.MAX_NAO_ENCONTRADOS_SEGUIDOS:
@@ -581,7 +588,7 @@ class Rodada:
             return
         tarefa = self._tarefa
         self.registro.registrar(
-            proc.cnj, self._perfil_de(proc).descricao, situacao,
+            proc.cnj, self._chave(proc), situacao,
             id_legalone=id_legalone,
             detalhe=detalhe,
             origem=proc.origem,
@@ -618,7 +625,7 @@ class Rodada:
         suspeitos = set(self.trilha_sem_achar)
         self.nao_encontrados[:] = [
             n for n in self.nao_encontrados
-            if (n["cnj_busca"], n["tarefa"]) not in suspeitos
+            if (n["cnj_busca"], n.get("chave", n["tarefa"])) not in suspeitos
         ]
         logger.error(
             "PARADO: %d processos seguidos sem ser encontrados. Numa rodada "
@@ -891,6 +898,17 @@ def _resolver_perfis(automador, perfis: list[config.PerfilTarefa]
     return resolucao
 
 
+def chave_do_ledger(proc: planilha.Processo, perfil: config.PerfilTarefa) -> str:
+    """O que identifica a tarefa deste processo no ledger.
+
+    A descricao da tarefa (a da linha ou a do perfil da rodada) e, no modo
+    planilha com INICIO DA TAREFA na linha, o dia de inicio junto: o mesmo ato
+    pode voltar no mesmo processo em outro dia, e com a chave so pela descricao
+    a segunda vez seria pulada como ja feita. Ver ledger.chave_tarefa.
+    """
+    return ledger_mod.chave_tarefa(proc.tarefa or perfil.descricao, proc.data_chave)
+
+
 def _montar_fila(args: argparse.Namespace, registro: ledger_mod.Ledger,
                  perfil: config.PerfilTarefa, processos: list[planilha.Processo]
                  ) -> tuple[list[planilha.Processo], list[planilha.Processo],
@@ -898,7 +916,8 @@ def _montar_fila(args: argparse.Namespace, registro: ledger_mod.Ledger,
     """Aplica ledger, --processo e --limite. Devolve (processos, fila, pular).
 
     O que ja foi feito e um par (processo, tarefa), nunca so o processo: um
-    numero que ja recebeu a defesa continua devendo o faturamento final.
+    numero que ja recebeu a defesa continua devendo o faturamento final. No
+    modo planilha a tarefa leva o dia de inicio (chave_do_ledger).
     """
     # Uma simulacao nao deixa rastro no ledger; pular o que ja esta la faria a
     # simulacao mentir sobre o tamanho da rodada real seguinte.
@@ -908,10 +927,10 @@ def _montar_fila(args: argparse.Namespace, registro: ledger_mod.Ledger,
         feitos = registro.concluidos if args.retentar else registro.todos
         # As descricoes que esta planilha de fato pede — no modo planilha elas
         # nem existem num perfil.
-        descricoes = {p.tarefa or perfil.descricao for p in processos}
-        pular = {(cnj, descricao)
-                 for descricao in descricoes
-                 for cnj in feitos(descricao)}
+        chaves = {chave_do_ledger(p, perfil) for p in processos}
+        pular = {(cnj, chave)
+                 for chave in chaves
+                 for cnj in feitos(chave)}
 
     if args.processo:
         # Normaliza igual a planilha, para o numero digitado casar.
@@ -924,7 +943,7 @@ def _montar_fila(args: argparse.Namespace, registro: ledger_mod.Ledger,
 
     # Processo sem tarefa propria e o caso de sempre: a tarefa da rodada inteira.
     fila = [p for p in processos
-            if (p.cnj, p.tarefa or perfil.descricao) not in pular]
+            if (p.cnj, chave_do_ledger(p, perfil)) not in pular]
     if args.limite:
         fila = fila[: args.limite]
     return processos, fila, pular

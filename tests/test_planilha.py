@@ -1,4 +1,6 @@
 """Leitura da planilha de cobrancas."""
+import datetime
+
 import pytest
 from openpyxl import Workbook
 
@@ -449,8 +451,6 @@ def test_colunas_da_tarefa_sao_ignoradas_fora_do_modo(tmp_path):
 
 
 def test_colunas_de_data_aceitam_celula_de_data_e_texto(tmp_path):
-    import datetime
-
     arq = _planilha(tmp_path, {"Tarefas": [
         (*CABECALHO_TAREFA, "INÍCIO DA TAREFA", "CONCLUSÃO DA TAREFA",
          "PUBLICAÇÃO DA TAREFA", "DISPONIBILIZAÇÃO DA TAREFA"),
@@ -470,3 +470,78 @@ def test_colunas_de_data_aceitam_celula_de_data_e_texto(tmp_path):
                                                "25/09/2026")
     assert (b.campos_tarefa["inicio"], b.campos_tarefa["disponibilizacao"]) == (
         "01/10/2026 14:00", "24/09/2026")
+
+
+CABECALHO_COM_INICIO = (*CABECALHO_TAREFA, "INÍCIO DA TAREFA")
+
+
+def test_mesmo_ato_em_dias_diferentes_sao_duas_tarefas(tmp_path):
+    # O segundo alvara do mesmo processo, uma semana depois, e outra tarefa.
+    arq = _planilha(tmp_path, {"Agendamentos": [
+        CABECALHO_COM_INICIO,
+        (A, "Verificar Alvará - TJMT", "Diversos", "Pendente",
+         "Beltrano Augusto Lima", "11/11/2026 23:59"),
+        (A, "Verificar Alvará - TJMT", "Diversos", "Pendente",
+         "Beltrano Augusto Lima", datetime.datetime(2026, 11, 18, 23, 59)),
+    ]})
+
+    processos = planilha.ler(arq, colunas_da_tarefa=True)
+
+    assert [(p.cnj, p.tarefa, p.data_chave) for p in processos] == [
+        (A, "Verificar Alvará - TJMT", "11/11/2026"),
+        (A, "Verificar Alvará - TJMT", "18/11/2026"),
+    ]
+
+
+def test_mesmo_dia_com_hora_diferente_continua_sendo_conflito(tmp_path):
+    # A chave e pelo dia: duas horas no mesmo dia para a mesma descricao seriam
+    # um cadastro so no ledger, e escolher uma delas seria chute.
+    arq = _planilha(tmp_path, {"Agendamentos": [
+        CABECALHO_COM_INICIO,
+        (A, "Verificar Alvará - TJMT", "Diversos", "Pendente",
+         "Beltrano Augusto Lima", "11/11/2026 10:00"),
+        (A, "Verificar Alvará - TJMT", "Diversos", "Pendente",
+         "Beltrano Augusto Lima", "11/11/2026 23:59"),
+    ]})
+
+    with pytest.raises(ValueError, match="valores diferentes"):
+        planilha.ler(arq, colunas_da_tarefa=True)
+
+
+def test_linha_igual_repetida_continua_virando_uma_so(tmp_path):
+    arq = _planilha(tmp_path, {"Agendamentos": [
+        CABECALHO_COM_INICIO,
+        (A, "Verificar Alvará - TJMT", "Diversos", "Pendente",
+         "Beltrano Augusto Lima", "11/11/2026 23:59"),
+        (A, "Verificar Alvará - TJMT", "Diversos", "Pendente",
+         "Beltrano Augusto Lima", "11/11/2026 23:59"),
+    ]})
+
+    (proc,) = planilha.ler(arq, colunas_da_tarefa=True)
+
+    assert proc.linhas == ["Agendamentos!L2", "Agendamentos!L3"]
+
+
+def test_sem_inicio_na_linha_a_chave_fica_sem_data(tmp_path):
+    arq = _planilha(tmp_path, {"Tarefas": [
+        CABECALHO_COM_INICIO,
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima", None),
+        # So a hora: o dia e o do cadastro, que a planilha nao sabe.
+        (B, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima", "09:00"),
+    ]})
+
+    a, b = planilha.ler(arq, colunas_da_tarefa=True)
+
+    assert (a.data_chave, b.data_chave) == ("", "")
+
+
+def test_fora_do_modo_planilha_nao_ha_data_na_chave(tmp_path):
+    arq = _planilha(tmp_path, {"Tarefas": [
+        CABECALHO_COM_INICIO,
+        (A, "CONFERIR CUSTAS", None, "Pendente", "Beltrano Augusto Lima",
+         "11/11/2026 23:59"),
+    ]})
+
+    (proc,) = planilha.ler(arq)
+
+    assert proc.data_chave == ""
