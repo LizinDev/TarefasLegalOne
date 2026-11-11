@@ -315,10 +315,18 @@ Tarefa:      'CONFERIR CUSTAS' / tipo 'Diversos' / status 'Pendente' / responsav
 Tarefa:      'FATURAMENTO FINAL' / tipo 'Diversos' / status 'Cumprido' / responsavel 'Fulana Regina de Araujo': 40 processo(s)
 ```
 
-O mesmo processo pode pedir tarefas diferentes em linhas diferentes. Mas a
-mesma tarefa (mesma descrição) no mesmo processo, com tipo, status ou
-responsável diferentes entre as linhas, encerra com código 2 — o ledger guarda
-um cadastro por par (processo, descrição).
+O mesmo processo pode pedir tarefas diferentes em linhas diferentes — inclusive
+a **mesma descrição em dias diferentes**: com `INÍCIO DA TAREFA` preenchido, o
+dia de início faz parte da identidade da tarefa. Um segundo
+`Verificar Alvará - TJMT` no mesmo processo, para outro dia, é cadastrado; a
+mesma linha repetida, ou uma retomada, não. Já a mesma descrição no mesmo
+processo e no **mesmo dia**, com tipo, status, responsável ou hora diferentes
+entre as linhas, encerra com código 2 — o ledger guarda um cadastro por
+(processo, descrição, dia de início).
+
+Linha sem `INÍCIO DA TAREFA` (ou só com a hora) segue a regra antiga: um
+cadastro por (processo, descrição), em qualquer dia. Os relatórios mostram a
+descrição como foi ao Legal One; o dia está na coluna de início.
 
 **`--tarefa auto`** é para a planilha que mistura faturamento e defesa na mesma
 aba. O ledger é indexado por **(processo, tarefa)**, de modo que o mesmo processo

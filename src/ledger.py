@@ -8,9 +8,15 @@ A chave e (processo, tarefa), nao so o processo: o mesmo numero pode estar nas
 duas planilhas e precisar das duas tarefas. Com chave so no processo, cadastrar
 FATURAMENTO FINAL faria a rodada de DEFESA FATURADA pular aquele processo em
 silencio.
+
+No modo --tarefa planilha com INICIO DA TAREFA na linha, a "tarefa" da chave
+leva a data de inicio junto (ver chave_tarefa): o mesmo ato pode se repetir no
+mesmo processo em outro dia ("Verificar Alvara - TJMT" duas vezes), e com a
+chave so pela descricao a segunda vez seria pulada em silencio.
 """
 import csv
 import logging
+import re
 import sqlite3
 from collections import Counter
 from collections.abc import Iterable
@@ -56,6 +62,34 @@ _SQL_NAO_REBAIXAR = (
     f"processos.situacao IN ({_SQL_NOSSOS_CADASTROS}) "
     f"AND excluded.situacao NOT IN ({_SQL_NOSSOS_CADASTROS})"
 )
+
+# Separa a descricao da data de inicio na chave do ledger (ver chave_tarefa).
+SEPARADOR_DATA = " @ "
+_RE_CHAVE_COM_DATA = re.compile(r"^(.*) @ (\d{2}/\d{2}/\d{4})$", re.DOTALL)
+
+
+def chave_tarefa(descricao: str, data_inicio: str = "") -> str:
+    """O que identifica a tarefa no ledger: a descricao, com a data se houver.
+
+    So o modo --tarefa planilha passa a data, e so quando a linha tem INICIO DA
+    TAREFA: ali cada linha e um ato com dia proprio, e o mesmo texto em outro
+    dia e outra tarefa. Nos perfis e na tarefa avulsa a chave continua sendo so
+    a descricao — a mesma tarefa nao deve ser cadastrada de novo por ter mudado
+    a data da rodada.
+    """
+    return f"{descricao}{SEPARADOR_DATA}{data_inicio}" if data_inicio else descricao
+
+
+def partes_da_chave(chave: str) -> tuple[str, str]:
+    """(descricao, data de inicio) de uma chave; data "" na chave sem data."""
+    m = _RE_CHAVE_COM_DATA.match(chave)
+    return (m.group(1), m.group(2)) if m else (chave, "")
+
+
+def descricao_da_chave(chave: str) -> str:
+    """A descricao que foi ao Legal One — e o que os relatorios mostram."""
+    return partes_da_chave(chave)[0]
+
 
 ESQUEMA_TABELA = """
 CREATE TABLE IF NOT EXISTS processos (
@@ -326,21 +360,30 @@ class Ledger:
 
     def concluidos(self, tarefa: str) -> set[str]:
         """O que --retentar pula: as tarefas que nos cadastramos."""
-        marcas = ",".join("?" * len(NOSSOS_CADASTROS))
-        return {
-            r[0] for r in self.con.execute(
-                f"SELECT cnj FROM processos "
-                f"WHERE tarefa = ? AND situacao IN ({marcas})",
-                (tarefa, *NOSSOS_CADASTROS),
-            )
-        }
+        return self._cnjs(tarefa, NOSSOS_CADASTROS)
 
     def todos(self, tarefa: str) -> set[str]:
-        return {
-            r[0] for r in self.con.execute(
-                "SELECT cnj FROM processos WHERE tarefa = ?", (tarefa,)
-            )
-        }
+        return self._cnjs(tarefa)
+
+    def _cnjs(self, tarefa: str, situacoes: Iterable[str] | None = None) -> set[str]:
+        """Processos com a chave `tarefa` no ledger (nas `situacoes`, se dadas).
+
+        Uma chave com data (chave_tarefa) tambem acha o registro gravado antes
+        de a data entrar na chave: mesma descricao e mesmo dia de inicio em
+        data_inicio. Sem isso, retomar depois da atualizacao uma planilha ja
+        rodada cadastraria tudo de novo.
+        """
+        descricao, data = partes_da_chave(tarefa)
+        filtro, valores = "tarefa = ?", [tarefa]
+        if data:
+            filtro = "(tarefa = ? OR (tarefa = ? AND substr(data_inicio, 1, 10) = ?))"
+            valores += [descricao, data]
+        if situacoes is not None:
+            situacoes = list(situacoes)
+            filtro += f" AND situacao IN ({','.join('?' * len(situacoes))})"
+            valores += situacoes
+        return {r[0] for r in self.con.execute(
+            f"SELECT cnj FROM processos WHERE {filtro}", valores)}
 
     def esquecer(self, cnjs: Iterable[str], tarefa: str) -> int:
         """Apaga registros para que o processo seja tentado de novo do zero.
@@ -384,10 +427,12 @@ class Ledger:
         desde/ate no formato do ledger, com a precisao que se quiser
         ("2026-09-10" ou "2026-09-10T14:00"). E o recorte de uma leva: as levas
         nao coincidem com dias — uma atravessa a meia-noite, um dia tem duas.
-        Mesmas colunas de cadastrados_em.
+        Mesmas colunas de cadastrados_em. A tarefa sai como descricao, sem a
+        data da chave (ela ja esta em data_inicio): e o texto que foi ao Legal
+        One, que a planilha do dia mostra e a auditoria procura.
         """
         marcas = ",".join("?" * len(NOSSOS_CADASTROS))
-        return self.con.execute(
+        linhas = self.con.execute(
             f"SELECT cnj, tarefa, id_legalone, tipo_cobranca, status_planilha, "
             f"       origem, quando, situacao, {', '.join(CAMPOS_DA_TAREFA)} "
             f"FROM processos WHERE situacao IN ({marcas}) "
@@ -395,6 +440,8 @@ class Ledger:
             f"ORDER BY tarefa, quando",
             (*NOSSOS_CADASTROS, desde, ate),
         ).fetchall()
+        return [(cnj, descricao_da_chave(tarefa), *resto)
+                for cnj, tarefa, *resto in linhas]
 
     def dias_com_cadastro(self) -> list[str]:
         """Dias com pelo menos um cadastro, do mais recente para o mais antigo."""
@@ -409,9 +456,11 @@ class Ledger:
 
     def resumo(self, tarefa: str | None = None) -> Counter:
         if tarefa:
+            # Por descricao: as chaves com data (chave_tarefa) contam junto.
             return Counter(dict(self.con.execute(
                 "SELECT situacao, COUNT(*) FROM processos "
-                "WHERE tarefa = ? GROUP BY situacao", (tarefa,)
+                "WHERE tarefa = ?1 OR substr(tarefa, 1, length(?1) + length(?2)) "
+                "= ?1 || ?2 GROUP BY situacao", (tarefa, SEPARADOR_DATA)
             )))
         return Counter(dict(self.con.execute(
             "SELECT situacao, COUNT(*) FROM processos GROUP BY situacao"
@@ -433,7 +482,8 @@ class Ledger:
                  "TIPO_TAREFA", "STATUS_TAREFA", "RESPONSAVEL", "DATA_INICIO",
                  "DATA_FIM", "DATA_PUBLICACAO", "DATA_DISPONIBILIZACAO"]
             )
-            escritor.writerows(linhas)
+            escritor.writerows((cnj, descricao_da_chave(tarefa), *resto)
+                               for cnj, tarefa, *resto in linhas)
         logger.info("Relatorio salvo: %s (%d linha[s])", caminho, len(linhas))
         return len(linhas)
 
@@ -450,7 +500,8 @@ class Ledger:
             PENDENTES_ATENCAO,
         ).fetchall()
         escrever_nao_encontrados(caminho, [
-            {"cnj": orig, "cnj_busca": c, "tarefa": tf, "situacao": s,
+            {"cnj": orig, "cnj_busca": c, "tarefa": descricao_da_chave(tf),
+             "situacao": s,
              "motivo": d, "tipo_cobranca": t, "status_planilha": st, "origem": o}
             for orig, c, tf, s, d, t, st, o in linhas
         ])

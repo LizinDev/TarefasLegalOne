@@ -60,6 +60,8 @@ só liga com `--tarefa planilha`. Planilha jurídica costuma ter uma coluna
 pode mudar a tarefa sem alguém pedir. No mesmo espírito, o mesmo par (processo,
 descrição) com tipo, status ou responsável diferentes em duas linhas é erro de
 uso: o ledger guarda um cadastro por par, e ficar com um dos dois seria chute.
+Com `INÍCIO DA TAREFA` na linha, o par vira trio (processo, descrição, dia de
+início) — ver [Retomada](#retomada).
 
 Um perfil nomeado exige um trecho no nome do arquivo (`dica_arquivo`): se você
 mandar a planilha de defesas com `--tarefa faturamento-final`, a rodada é
@@ -160,6 +162,21 @@ número pode estar nas duas planilhas e precisar das duas tarefas; com a chave s
 no processo, cadastrar `FATURAMENTO FINAL` faria a rodada de `DEFESA FATURADA`
 pular aquele processo em silêncio. Ledgers de versões anteriores são migrados
 automaticamente, com os registros existentes atribuídos a `FATURAMENTO FINAL`.
+
+No modo `--tarefa planilha`, quando a linha traz `INÍCIO DA TAREFA`, a tarefa da
+chave leva também o **dia de início** (`Verificar Alvará - TJMT @ 18/11/2026`,
+em `ledger.chave_tarefa`). É o caso da planilha diária de publicações: o mesmo
+ato volta no mesmo processo dias depois — um segundo alvará, uma nova sentença
+de embargos —, e com a chave só pela descrição essa segunda tarefa seria pulada
+como já feita, sem aviso nenhum. A data fica só na chave: o Legal One recebe a
+descrição, e os relatórios a mostram sem a data. Perfis, `--tarefa auto`,
+tarefa avulsa e linhas sem início continuam com a chave só pela descrição — ali
+mudar a data da rodada não faz da tarefa outra.
+
+Não há migração: um registro gravado antes disso (chave sem data) conta como
+feito para a linha de mesma descrição cujo dia de início é o de `data_inicio`
+no ledger. Retomar depois da atualização uma planilha já rodada não cadastra de
+novo.
 
 Situações registradas no ledger:
 
@@ -524,7 +541,14 @@ Para os ~12 mil processos únicos da planilha, o fluxo completo fica na casa das
 
 ## Versão
 
-**1.8.0** — a automação deixa de ser só de faturamento e defesa: qualquer tarefa,
+**1.9.0** — no modo `--tarefa planilha`, o dia de `INÍCIO DA TAREFA` entra na
+chave do ledger e na deduplicação da planilha: a mesma descrição no mesmo
+processo em outro dia passa a ser outra tarefa, em vez de ser pulada em silêncio
+como já cadastrada (ou de parar a leitura como conflito, quando vinha na mesma
+planilha). Registros anteriores continuam valendo para o mesmo dia, sem
+migração. Os relatórios mostram a descrição sem a data da chave.
+
+1.8.0 — a automação deixa de ser só de faturamento e defesa: qualquer tarefa,
 com qualquer tipo, status, responsável e data. Os perfis saem do código para o
 `tarefas.toml`; `--descricao`, `--tipo`, `--status` e `--responsavel` definem
 ou sobrepõem a tarefa na linha de comando, e `--tarefa planilha` a lê das
