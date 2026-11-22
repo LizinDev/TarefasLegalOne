@@ -50,9 +50,9 @@ logging.basicConfig(
 # --- Valores desta instalacao (local.toml, fora do git) ----------------------
 #
 # O endereco do Legal One do escritorio e o nome de quem assina as tarefas nao
-# ficam no repositorio: em 23/10/2026 ele estava publico com os dois. Moram no
-# local.toml, ignorado pelo git; o local.exemplo.toml mostra o formato e e o
-# que os testes usam. TAREFAS_LOCAL aponta para outro arquivo.
+# ficam no repositorio. Moram no local.toml, ignorado pelo git; o
+# local.exemplo.toml mostra o formato e e o que os testes usam. TAREFAS_LOCAL
+# aponta para outro arquivo.
 
 ARQUIVO_LOCAL = Path(os.environ.get("TAREFAS_LOCAL") or BASE_DIR / "local.toml")
 SECAO_LEGALONE = "legalone"

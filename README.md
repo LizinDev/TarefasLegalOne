@@ -465,8 +465,7 @@ git config core.hooksPath .githooks # uma vez por clone: a mesma checagem no com
 
 Exemplo em teste e documentação usa número **inventado**, com o dígito verificador
 errado de propósito (`0012345-00.2019.8.05.0001`). Número com dígito certo é
-quase sempre copiado de um processo real, e a checagem barra: foi assim que quatro
-deles ficaram expostos enquanto o repositório era público. Sintético de dígito
+quase sempre copiado de um processo real, e a checagem barra. Sintético de dígito
 válido, se um dia for preciso, entra em `scripts/cnj_permitidos.txt`.
 
 Nenhum teste toca no Legal One, no Chrome ou no ledger de produção: o Selenium

@@ -1,10 +1,10 @@
 """Barra numero CNJ real, e valor do local.toml, em arquivo versionado.
 
-Em 23/10/2026 o repositorio estava publico com 4 numeros de processo reais no
-README, no MANUAL e nos testes. Um numero CNJ inventado quase nunca tem o digito
-verificador certo (1 chance em 97), entao "digito confere" e o sinal de que o
-numero foi copiado de um processo de verdade. Este script procura esses numeros
-e falha se achar algum que nao esteja em cnj_permitidos.txt.
+Exemplo em documentacao e teste usa numero inventado. Um numero CNJ inventado
+quase nunca tem o digito verificador certo (1 chance em 97), entao "digito
+confere" e o sinal de que o numero foi copiado de um processo de verdade. Este
+script procura esses numeros e falha se achar algum que nao esteja em
+cnj_permitidos.txt.
 
     python scripts/checar_cnj.py              # arquivos versionados (git ls-files)
     python scripts/checar_cnj.py --staged     # o que vai no proximo commit

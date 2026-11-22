@@ -1,9 +1,7 @@
 name: CodeQL
 
 # Em repositorio privado o code scanning exige GitHub Advanced Security, que
-# esta conta nao tem: desde que o repo virou privado (23/10/2026) a analise
-# falhava toda segunda. O job agora so roda com o repo publico, e volta sozinho
-# se ele for publicado de novo.
+# esta conta nao tem. Por isso o job so roda com o repo publico.
 #
 # Por isso ele nao roda em push nem em pull request: uma falha semanal por
 # licenca e um aviso, uma falha em todo push e um estorvo. Com GHAS ligado,
