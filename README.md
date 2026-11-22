@@ -75,10 +75,10 @@ antes de a rodada começar.
 O que identifica o escritório e as pessoas fica **fora** do repositório, no
 `local.toml` (ignorado pelo git; o formato está em `local.exemplo.toml`): o
 endereço do Legal One e o responsável de cada perfil. Uma seção do `local.toml`
-com o nome de um perfil completa aquele perfil. Em 23/10/2026 o repositório
-estava público com esses dados; desde então eles só existem em cada máquina, e o
-hook de pre-commit recusa o commit que trouxer um valor do `local.toml`. Sem o
-arquivo, a rodada e a auditoria terminam com código 2 dizendo o que falta.
+com o nome de um perfil completa aquele perfil. Esses dados só existem em cada
+máquina, e o hook de pre-commit recusa o commit que trouxer um valor do
+`local.toml`. Sem o arquivo, a rodada e a auditoria terminam com código 2 dizendo
+o que falta.
 
 Pela mesma razão, a tarefa avulsa (`--descricao`) **exige** `--status` e
 `--responsavel`: uma tarefa nova que caísse em Cumprido e no nome de alguém
