@@ -7,6 +7,36 @@ Para cada linha da planilha o programa busca o processo pelo número CNJ, abre o
 formulário de nova tarefa e preenche descrição, tipo, status, responsável e
 data da tarefa daquele processo.
 
+[Exemplo](#exemplo) · [Requisitos](#requisitos) · [Manual de operação](MANUAL.md) ·
+[Relatórios](#relatórios) · [Como os erros são tratados](#como-os-erros-são-tratados)
+
+## Exemplo
+
+Dados fictícios. Três linhas de uma planilha de cobranças:
+
+| PROCESSO | TIPO DE COBRANÇA |
+| --- | --- |
+| `0000001-00.2026.8.16.0000` | FATURAMENTO FINAL |
+| `0000002-00.2026.8.16.0000` | FATURAMENTO FINAL |
+| `0000003-00.2026.8.16.0000` | FATURAMENTO FINAL |
+
+```powershell
+python main.py --planilha "..\Planilhas\Faturamento exemplo.xlsx" --executar
+```
+
+`Ctrl+C` depois da primeira linha encerra com código 130, e o que já terminou
+fica no ledger. O mesmo comando, repetido, pula essa linha e segue:
+
+| PROCESSO | 1ª rodada | 2ª rodada | `SITUACAO` em `relatorio.csv` |
+| --- | --- | --- | --- |
+| `0000001-00.2026.8.16.0000` | cadastrada | pulada | `ok` |
+| `0000002-00.2026.8.16.0000` | não chegou a começar | cadastrada | `ok` |
+| `0000003-00.2026.8.16.0000` | não chegou a começar | não encontrada no Legal One | `nao_encontrado` |
+
+A terceira linha vai também para `nao_encontrados.csv`, com o motivo, para
+conferência manual. Sem `--executar`, o mesmo comando é uma simulação e nada é
+gravado.
+
 > Para operar no dia a dia — todas as flags, códigos de saída e o que fazer
 > quando algo dá errado —, veja o **[Manual de operação](MANUAL.md)**. Este
 > README explica as decisões de projeto por trás do comportamento.
